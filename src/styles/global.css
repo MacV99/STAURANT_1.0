@@ -1,0 +1,220 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
+:root {
+  /* COLORES - Ajusta según tu proyecto */
+  --clr-primary: #00588b;
+  --clr-dark: #1a1a1a;
+  --clr-dark2: #333333;
+  --clr-white: #f7f7f7;
+  --clr-white2: #ebebeb;
+
+  /* --clr-gray: #646464; */
+  --clr-text: #363636;
+  --clr-border: #e3e3e3;
+
+  /* TIPOGRAFÍA */
+  --font-main: "Montserrat", sans-serif;
+
+  /* EFECTOS Y TIMING */
+  --transition: 0.12s ease;
+  --border-radius: 10px;
+}
+
+/* === RESET BÁSICO === */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  line-height: normal;
+  font-family: var(--font-main);
+}
+
+/* === HTML === */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 100px;
+}
+
+/* === BODY === */
+body {
+  min-height: 100dvh;
+  line-height: 1.6;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  background-color: var(--clr-white);
+}
+
+/* === MAIN === */
+main {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
+
+/* === LISTAS Y ENLACES === */
+li {
+  list-style: none;
+}
+
+a {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* === ICONOS === */
+i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* === HEADINGS === */
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-indent: 2px;
+}
+
+/* === PÁRRAFOS === */
+p {
+  color: var(--clr-text);
+  line-height: normal;
+}
+
+/* === SECCIONES Y FOOTER === */
+section,
+footer {
+  padding: 40px 20px;
+  gap: 18px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+section>*,
+footer>* {
+  max-width: 1100px;
+}
+
+/* === SEPARADORES === */
+hr {
+  width: 100%;
+  border: solid 1px var(--clr-border);
+  margin: 5px 0;
+}
+
+/* === UTILIDADES FLEX === */
+.flex-column {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.flex-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: row;
+}
+
+/* === BOTONES === */
+button,
+.boton,
+.boton2 {
+  padding: 11px 20px;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-indent: 2px;
+  text-transform: uppercase;
+  border: solid 1px var(--clr-border);
+  background-color: var(--clr-white2);
+  color: var(--clr-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.boton2 {
+  background-color: transparent;
+  color: var(--clr-text);
+}
+
+/* === FORMULARIOS === */
+input,
+textarea,
+select {
+  outline: none;
+  border: solid 1px var(--clr-border);
+  background-color: var(--clr-white2);
+  padding: 10px;
+  font-size: 1rem;
+  font-family: var(--font-main);
+  color: var(--clr-text);
+  transition: var(--transition);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--clr-primary);
+}
+
+select {
+  cursor: pointer;
+}
+
+select option {
+  background-color: var(--clr-white2);
+  color: var(--clr-text);
+}
+
+textarea {
+  resize: vertical;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+input[type="file"] {
+  cursor: pointer;
+}
+
+/* === HOVER STATES === */
+@media (hover: hover) {
+
+  button:hover,
+  .boton:hover,
+  .boton2:hover {
+    background-color: var(--clr-border);
+  }
+
+
+}
+
+/* === RESPONSIVE === */
+@media (min-width: 768px) {
+
+  section,
+  footer {
+    padding: 55px 20px;
+  }
+
+  p {
+    font-size: 1.05rem;
+  }
+}
