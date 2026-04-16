@@ -10,31 +10,34 @@ export function getRatingClass(score: number): string {
 }
 
 export function getRatingBadgeHTML(score: number | null): string {
-  if (score === null) return `<span class="rating-badge badge-empty">—</span>`;
+  if (score === null) return `<span class="rating-badge badge-empty"><i class="bi bi-star"></i></span>`;
   const cls = getRatingClass(score);
-  return `<span class="rating-badge ${cls}">${score}</span>`;
+  return `<span class="rating-badge ${cls}"><i class="bi bi-star-fill rating-star"></i><span class="rating-num">${score}</span></span>`;
 }
 
 // ─── HTML renderers ────────────────────────────────────────────────────────────
 
 export function renderRestaurantCard(
   r: Restaurant,
-  avg: number | null
+  avg: number | null,
+  dishCount: number
 ): string {
   const badge = getRatingBadgeHTML(avg);
-  const pendingTag = r.status === "pending"
-    ? `<span class="pending-tag"><i class="bi bi-bookmark"></i> Pendiente</span>`
-    : "";
+  const dishPill = r.status === "visited"
+    ? `<span class="dish-count-pill"><i class="bi bi-journal-text"></i> ${dishCount} ${dishCount === 1 ? "plato" : "platos"}</span>`
+    : `<span class="pending-tag"><i class="bi bi-bookmark"></i> Pendiente</span>`;
 
   return `
     <article class="restaurant-card card-clickable" data-href="/restaurante?id=${r.id}">
-      <div class="card-top">
+      <div class="card-main">
         ${badge}
-        ${pendingTag}
-      </div>
-      <div class="card-body">
-        <h3>${escapeHtml(r.name)}</h3>
-        ${r.notes ? `<p class="card-notes">${escapeHtml(r.notes)}</p>` : ""}
+        <div class="card-body">
+          <h3>${escapeHtml(r.name)}</h3>
+          ${r.notes ? `<p class="card-notes">${escapeHtml(r.notes)}</p>` : ""}
+          <div class="card-meta">
+            ${dishPill}
+          </div>
+        </div>
       </div>
       <div class="card-actions">
         <button class="btn-edit-restaurant boton2" data-id="${r.id}">

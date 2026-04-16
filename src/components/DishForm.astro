@@ -12,12 +12,19 @@
       <input type="hidden" id="df-restaurant-id" />
 
       <label for="df-name">
-        Nombre del plato <span class="required">*</span>
-        <input type="text" id="df-name" required placeholder="Bandeja paisa, Sushi roll..." />
+        <span class="label-text">Nombre del plato <span class="required">*</span></span>
+        <input
+          type="text"
+          id="df-name"
+          required
+          placeholder="Bandeja paisa, Sushi roll..."
+        />
       </label>
 
       <div class="rating-field">
-        <span class="rating-label">Calificación <span class="required">*</span></span>
+        <span class="rating-label"
+          >Calificación <span class="required">*</span></span
+        >
         <div class="rating-row">
           <span class="range-min">1</span>
           <input
@@ -26,7 +33,7 @@
             min="1"
             max="10"
             value="7"
-            step="1"
+            step="0.5"
           />
           <span class="range-max">10</span>
           <span id="df-rating-value" class="rating-value">7</span>
@@ -34,14 +41,20 @@
       </div>
 
       <label for="df-notes">
-        Notas <span class="optional">(opcional)</span>
-        <textarea id="df-notes" rows="2" placeholder="Sabor, presentación, lo que quieras recordar..."></textarea>
+        <span class="label-text">Notas</span>
+        <textarea
+          id="df-notes"
+          rows="2"
+          placeholder="Sabor, presentación, lo que quieras recordar..."
+        ></textarea>
       </label>
 
       <p id="df-error" class="form-error" aria-live="polite"></p>
 
       <div class="form-footer">
-        <button type="button" id="dish-form-cancel" class="boton2">Cancelar</button>
+        <button type="button" id="dish-form-cancel" class="boton2"
+          >Cancelar</button
+        >
         <button type="submit" class="boton">Guardar</button>
       </div>
     </form>
@@ -91,11 +104,19 @@
     letter-spacing: 1px;
     color: var(--clr-dark2);
     text-transform: uppercase;
+    gap: 0;
+  }
+
+  .label-text {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 3px;
+    margin-bottom: 5px;
   }
 
   label input,
   label textarea {
-    margin-top: 5px;
     border-radius: var(--border-radius);
     width: 100%;
   }
@@ -186,14 +207,16 @@
 
 <script>
   import type { Dish } from "../lib/data.ts";
-  import { createDish, updateDish } from "../lib/data.ts";
+  import { createDish, updateDish, getDishesByRestaurant } from "../lib/data.ts";
   import { emit } from "../scripts/store.ts";
 
   const overlay = document.getElementById("dish-form-overlay")!;
   const form = document.getElementById("dish-form") as HTMLFormElement;
   const titleEl = document.getElementById("dish-form-title")!;
   const idInput = document.getElementById("df-id") as HTMLInputElement;
-  const restaurantIdInput = document.getElementById("df-restaurant-id") as HTMLInputElement;
+  const restaurantIdInput = document.getElementById(
+    "df-restaurant-id",
+  ) as HTMLInputElement;
   const nameInput = document.getElementById("df-name") as HTMLInputElement;
   const ratingInput = document.getElementById("df-rating") as HTMLInputElement;
   const ratingValue = document.getElementById("df-rating-value")!;
@@ -204,6 +227,12 @@
 
   ratingInput.addEventListener("input", () => {
     ratingValue.textContent = ratingInput.value;
+  });
+
+  nameInput.addEventListener("input", () => {
+    const pos = nameInput.selectionStart;
+    nameInput.value = nameInput.value.toUpperCase();
+    nameInput.setSelectionRange(pos, pos);
   });
 
   function open(mode: "create" | "edit", restaurantId: string, data?: Dish) {
@@ -250,10 +279,20 @@
       return;
     }
 
-    const rating = parseInt(ratingInput.value, 10);
-    const notes = notesInput.value.trim();
     const restaurantId = restaurantIdInput.value;
     const id = idInput.value;
+
+    const duplicate = getDishesByRestaurant(restaurantId).find(
+      (d) => d.name.trim().toLowerCase() === name.toLowerCase() && d.id !== id
+    );
+    if (duplicate) {
+      errorEl.textContent = "Ya existe un plato con ese nombre en este restaurante.";
+      nameInput.focus();
+      return;
+    }
+
+    const rating = parseFloat(ratingInput.value);
+    const notes = notesInput.value.trim();
 
     if (id) {
       const updated = updateDish(id, { name, rating, notes });

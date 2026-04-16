@@ -1,8 +1,17 @@
-<div id="restaurant-form-overlay" class="overlay" aria-modal="true" role="dialog">
+<div
+  id="restaurant-form-overlay"
+  class="overlay"
+  aria-modal="true"
+  role="dialog"
+>
   <div class="form-box">
     <div class="form-header">
       <h2 id="restaurant-form-title">Nuevo restaurante</h2>
-      <button id="restaurant-form-close" class="btn-close boton2" aria-label="Cerrar">
+      <button
+        id="restaurant-form-close"
+        class="btn-close boton2"
+        aria-label="Cerrar"
+      >
         <i class="bi bi-x-lg"></i>
       </button>
     </div>
@@ -11,19 +20,30 @@
       <input type="hidden" id="rf-id" />
 
       <label for="rf-name">
-        Nombre <span class="required">*</span>
-        <input type="text" id="rf-name" required placeholder="El Cielo, La Plaza..." />
+        <span class="label-text">Nombre <span class="required">*</span></span>
+        <input
+          type="text"
+          id="rf-name"
+          required
+          placeholder="El Cielo, La Plaza..."
+        />
       </label>
 
       <label for="rf-notes">
-        Notas <span class="optional">(opcional)</span>
-        <textarea id="rf-notes" rows="3" placeholder="Ambiente, ubicación, lo que quieras recordar..."></textarea>
+        <span class="label-text">Notas</span>
+        <textarea
+          id="rf-notes"
+          rows="3"
+          placeholder="Ambiente, ubicación, lo que quieras recordar..."
+        ></textarea>
       </label>
 
       <p id="rf-error" class="form-error" aria-live="polite"></p>
 
       <div class="form-footer">
-        <button type="button" id="restaurant-form-cancel" class="boton2">Cancelar</button>
+        <button type="button" id="restaurant-form-cancel" class="boton2"
+          >Cancelar</button
+        >
         <button type="submit" class="boton" id="rf-submit">Guardar</button>
       </div>
     </form>
@@ -75,11 +95,19 @@
     letter-spacing: 1px;
     color: var(--clr-dark2);
     text-transform: uppercase;
+    gap: 0;
+  }
+
+  .label-text {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 3px;
+    margin-bottom: 5px;
   }
 
   label input,
   label textarea {
-    margin-top: 5px;
     border-radius: var(--border-radius);
     width: 100%;
   }
@@ -118,7 +146,8 @@
 
 <script>
   import type { Restaurant } from "../lib/data.ts";
-  import { createRestaurant, updateRestaurant } from "../lib/data.ts";
+  import { createRestaurant, updateRestaurant, getRestaurants } from "../lib/data.ts";
+  // Nota: todas las funciones de data.ts son síncronas (leen del caché local)
   import { emit } from "../scripts/store.ts";
 
   const overlay = document.getElementById("restaurant-form-overlay")!;
@@ -159,6 +188,12 @@
     if (e.target === overlay) close();
   });
 
+  nameInput.addEventListener("input", () => {
+    const pos = nameInput.selectionStart;
+    nameInput.value = nameInput.value.toUpperCase();
+    nameInput.setSelectionRange(pos, pos);
+  });
+
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     errorEl.textContent = "";
@@ -170,14 +205,23 @@
       return;
     }
 
-    const notes = notesInput.value.trim();
     const id = idInput.value;
+    const duplicate = getRestaurants().find(
+      (r) => r.name.trim().toLowerCase() === name.toLowerCase() && r.id !== id
+    );
+    if (duplicate) {
+      errorEl.textContent = "Ya existe un restaurante con ese nombre.";
+      nameInput.focus();
+      return;
+    }
+
+    const notes = notesInput.value.trim();
 
     if (id) {
       const updated = updateRestaurant(id, { name, notes });
       if (updated) emit("restaurant:updated", updated);
     } else {
-      const created = createRestaurant({ name, status: "pending", notes });
+      const created = createRestaurant({ name, notes });
       emit("restaurant:created", created);
     }
 

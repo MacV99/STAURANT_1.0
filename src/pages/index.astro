@@ -8,6 +8,16 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 <Layout1 title="STAURANT">
   <div class="app-page">
     <TabBar />
+
+    <div class="sort-bar">
+      <span class="sort-label">Ordenar</span>
+      <div class="sort-pills">
+        <button class="sort-pill" data-field="date"><i class="bi bi-arrow-down-up"></i> Fecha</button>
+        <button class="sort-pill" data-field="name"><i class="bi bi-arrow-down-up"></i> Nombre</button>
+        <button class="sort-pill" data-field="rating"><i class="bi bi-arrow-down-up"></i> Rating</button>
+      </div>
+    </div>
+
     <div id="tab-visitados" class="tab-content" role="tabpanel" hidden></div>
     <div id="tab-pendientes" class="tab-content" role="tabpanel" hidden></div>
   </div>
@@ -42,47 +52,113 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 </style>
 
 <script>
+  import { supabase } from "../lib/supabase.ts";
   import {
+    initCache,
     getRestaurants,
     deleteRestaurant,
+    getDishesByRestaurant,
     getRestaurantAverage,
   } from "../lib/data.ts";
   import { renderRestaurantCard, on } from "../scripts/store.ts";
 
+  // ─── Auth + cache ───────────────────────────────────────────────────────────
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) { window.location.href = "/login"; throw new Error("No auth"); }
+  await initCache(); // carga desde localStorage o Supabase (solo primera vez)
+
+  // ─── Sort ───────────────────────────────────────────────────────────────────
+
+  type SortField = "name" | "rating" | "date";
+  type SortDir   = "asc" | "desc";
+  const SORT_KEY = "staurant_sort_r";
+
+  function getSortState(): { field: SortField; dir: SortDir } {
+    try { return JSON.parse(localStorage.getItem(SORT_KEY) ?? "{}"); }
+    catch { return { field: "date", dir: "desc" }; }
+  }
+  function setSortState(s: { field: SortField; dir: SortDir }) {
+    localStorage.setItem(SORT_KEY, JSON.stringify(s));
+  }
+
+  let sortState = { field: "date" as SortField, dir: "desc" as SortDir, ...getSortState() };
+
+  function sortRestaurants(list: ReturnType<typeof getRestaurants>) {
+    return [...list].sort((a, b) => {
+      let cmp = 0;
+      if (sortState.field === "name") {
+        cmp = a.name.localeCompare(b.name);
+      } else if (sortState.field === "rating") {
+        const ra = getRestaurantAverage(a.id) ?? -1;
+        const rb = getRestaurantAverage(b.id) ?? -1;
+        cmp = ra - rb;
+      } else {
+        cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+      return sortState.dir === "asc" ? cmp : -cmp;
+    });
+  }
+
+  function updateSortUI() {
+    document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
+      const isActive = btn.dataset.field === sortState.field;
+      btn.classList.toggle("active", isActive);
+      const icon = btn.querySelector("i")!;
+      icon.className = isActive
+        ? `bi bi-arrow-${sortState.dir === "asc" ? "up" : "down"}`
+        : "bi bi-arrow-down-up";
+    });
+  }
+
+  document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const field = btn.dataset.field as SortField;
+      if (sortState.field === field) {
+        sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
+      } else {
+        sortState.field = field;
+        sortState.dir = field === "rating" ? "desc" : "asc";
+      }
+      setSortState(sortState);
+      updateSortUI();
+      renderBoth();
+    });
+  });
+
   // ─── Tab switching ──────────────────────────────────────────────────────────
 
-  const tabVisitados = document.getElementById("tab-visitados")!;
+  const tabVisitados  = document.getElementById("tab-visitados")!;
   const tabPendientes = document.getElementById("tab-pendientes")!;
   const tabBtns = document.querySelectorAll<HTMLButtonElement>(".tab-btn");
 
   function getActiveTab(): "visitados" | "pendientes" {
-    const params = new URLSearchParams(window.location.search);
-    return (params.get("tab") as "visitados" | "pendientes") ?? "visitados";
+    const p = new URLSearchParams(window.location.search);
+    return (p.get("tab") as "visitados" | "pendientes") ?? "visitados";
   }
 
   function activateTab(tab: "visitados" | "pendientes") {
-    tabVisitados.hidden = tab !== "visitados";
+    tabVisitados.hidden  = tab !== "visitados";
     tabPendientes.hidden = tab !== "pendientes";
     tabBtns.forEach((btn) => {
-      const isActive = btn.dataset.tab === tab;
-      btn.classList.toggle("active", isActive);
-      btn.setAttribute("aria-selected", String(isActive));
+      const active = btn.dataset.tab === tab;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-selected", String(active));
     });
     history.replaceState(null, "", `/?tab=${tab}`);
   }
 
-  tabBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      activateTab(btn.dataset.tab as "visitados" | "pendientes");
-    });
-  });
+  tabBtns.forEach((btn) =>
+    btn.addEventListener("click", () => activateTab(btn.dataset.tab as "visitados" | "pendientes"))
+  );
 
-  // ─── Rendering ─────────────────────────────────────────────────────────────
+  // ─── Rendering (todo síncrono desde caché) ──────────────────────────────────
 
   function renderList(status: "visited" | "pending", container: HTMLElement) {
-    const restaurants = getRestaurants().filter((r) => r.status === status);
+    const all  = getRestaurants().filter((r) => r.status === status);
+    const sorted = sortRestaurants(all);
 
-    if (restaurants.length === 0) {
+    if (sorted.length === 0) {
       container.innerHTML = `
         <div class="empty-state">
           <i class="bi bi-${status === "visited" ? "journal-check" : "bookmark"}"></i>
@@ -92,36 +168,33 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
       return;
     }
 
-    container.innerHTML = `<div class="cards-grid">${restaurants
-      .map((r) => renderRestaurantCard(r, getRestaurantAverage(r.id)))
-      .join("")}</div>`;
-
-    wireCardActions(container);
+    const cards = sorted.map((r) =>
+      renderRestaurantCard(r, getRestaurantAverage(r.id), getDishesByRestaurant(r.id).length)
+    );
+    container.innerHTML = `<div class="cards-grid">${cards.join("")}</div>`;
+    wireCardActions(container, sorted);
   }
 
   function updateCounts() {
     const all = getRestaurants();
-    const visitedCount = all.filter((r) => r.status === "visited").length;
-    const pendingCount = all.filter((r) => r.status === "pending").length;
     const cv = document.getElementById("count-visitados");
     const cp = document.getElementById("count-pendientes");
-    if (cv) cv.textContent = String(visitedCount);
-    if (cp) cp.textContent = String(pendingCount);
+    if (cv) cv.textContent = String(all.filter((r) => r.status === "visited").length);
+    if (cp) cp.textContent = String(all.filter((r) => r.status === "pending").length);
   }
 
   function renderBoth() {
-    renderList("visited", tabVisitados);
+    renderList("visited",  tabVisitados);
     renderList("pending", tabPendientes);
     updateCounts();
   }
 
-  // ─── Card actions wiring ────────────────────────────────────────────────────
+  // ─── Card actions ───────────────────────────────────────────────────────────
 
-  function wireCardActions(container: HTMLElement) {
+  function wireCardActions(container: HTMLElement, restaurants: ReturnType<typeof getRestaurants>) {
     container.querySelectorAll<HTMLElement>(".card-clickable").forEach((card) => {
       card.addEventListener("click", (e) => {
-        const target = e.target as HTMLElement;
-        if (target.closest("button")) return;
+        if ((e.target as HTMLElement).closest("button")) return;
         const href = card.dataset.href;
         if (href) window.location.href = href;
       });
@@ -129,45 +202,35 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
     container.querySelectorAll<HTMLButtonElement>(".btn-edit-restaurant").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const id = btn.dataset.id!;
-        const r = getRestaurants().find((r) => r.id === id);
+        const r = restaurants.find((r) => r.id === btn.dataset.id);
         if (r) (window as any).restaurantForm.open("edit", r);
       });
     });
 
     container.querySelectorAll<HTMLButtonElement>(".btn-delete-restaurant").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const id = btn.dataset.id!;
-        const r = getRestaurants().find((r) => r.id === id);
+        const r = restaurants.find((r) => r.id === btn.dataset.id);
         (window as any).confirmDialog.show(
           `¿Eliminar "${r?.name}"? Se borrarán también sus platos.`,
-          () => {
-            deleteRestaurant(id);
-            renderBoth();
-          }
+          () => { deleteRestaurant(btn.dataset.id!); renderBoth(); }
         );
       });
     });
-
   }
 
-  // ─── Add restaurant button ──────────────────────────────────────────────────
+  // ─── FAB + eventos ─────────────────────────────────────────────────────────
 
   document.getElementById("btn-add-restaurant")!.addEventListener("click", () => {
     (window as any).restaurantForm.open("create");
   });
 
-  // ─── Event listeners ───────────────────────────────────────────────────────
-
-  on("restaurant:created", () => {
-    renderBoth();
-    activateTab("pendientes");
-  });
+  on("restaurant:created", () => { renderBoth(); activateTab("pendientes"); });
   on("restaurant:updated", () => renderBoth());
   on("restaurant:visited", () => renderBoth());
 
   // ─── Init ──────────────────────────────────────────────────────────────────
 
+  updateSortUI();
   renderBoth();
   activateTab(getActiveTab());
 </script>

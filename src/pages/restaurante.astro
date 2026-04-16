@@ -6,7 +6,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
 <Layout1 title="Restaurante · STAURANT">
   <div class="detail-page">
-    <a href="/" class="back-link">
+    <a id="back-link" href="/" class="back-link">
       <i class="bi bi-arrow-left"></i> Volver
     </a>
 
@@ -19,6 +19,16 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
           <i class="bi bi-plus-lg"></i> Agregar plato
         </button>
       </div>
+
+      <div class="sort-bar">
+        <span class="sort-label">Ordenar</span>
+        <div class="sort-pills">
+          <button class="sort-pill" data-field="rating"><i class="bi bi-arrow-down-up"></i> Rating</button>
+          <button class="sort-pill" data-field="name"><i class="bi bi-arrow-down-up"></i> Nombre</button>
+          <button class="sort-pill" data-field="date"><i class="bi bi-arrow-down-up"></i> Fecha</button>
+        </div>
+      </div>
+
       <div id="dishes-list"></div>
     </div>
   </div>
@@ -67,10 +77,26 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     gap: 12px;
   }
 
+  #btn-add-dish {
+    text-transform: none;
+    letter-spacing: 0.5px;
+    background: var(--clr-primary);
+    color: white;
+    border-color: var(--clr-primary);
+    font-size: 0.85rem;
+    padding: 9px 16px;
+  }
+
   .dishes-title {
     font-size: 1rem;
     letter-spacing: 2px;
     color: var(--clr-dark);
+  }
+
+  #dishes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
   }
 
   @media (hover: hover) {
@@ -87,57 +113,125 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 </style>
 
 <script>
+  import { supabase } from "../lib/supabase.ts";
   import {
+    initCache,
     getRestaurants,
     getDishesByRestaurant,
     deleteDish,
     getRestaurantAverage,
     markAsVisited,
+    escapeHtml,
   } from "../lib/data.ts";
   import { renderDishCard, getRatingBadgeHTML, on, emit } from "../scripts/store.ts";
-  import { escapeHtml } from "../lib/data.ts";
 
-  // ─── Guard ─────────────────────────────────────────────────────────────────
+  // ─── Auth + cache ───────────────────────────────────────────────────────────
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) { window.location.href = "/login"; throw new Error("No auth"); }
+  await initCache();
+
+  // ─── Guard restaurante ─────────────────────────────────────────────────────
 
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id") ?? "";
   let restaurant = getRestaurants().find((r) => r.id === id);
 
-  if (!restaurant) {
-    window.location.href = "/";
-    throw new Error("Restaurante no encontrado");
+  const backTab = restaurant?.status === "pending" ? "pendientes" : "visitados";
+  const backLink = document.getElementById("back-link") as HTMLAnchorElement;
+  if (backLink) backLink.href = `/?tab=${backTab}`;
+
+  if (!restaurant) { window.location.href = "/"; throw new Error("No encontrado"); }
+
+  // ─── Sort de platos ─────────────────────────────────────────────────────────
+
+  type SortField = "name" | "rating" | "date";
+  type SortDir   = "asc" | "desc";
+  const SORT_KEY = "staurant_sort_d";
+
+  function getSortState(): { field: SortField; dir: SortDir } {
+    try { return JSON.parse(localStorage.getItem(SORT_KEY) ?? "{}"); }
+    catch { return { field: "rating", dir: "desc" }; }
   }
+  function setSortState(s: { field: SortField; dir: SortDir }) {
+    localStorage.setItem(SORT_KEY, JSON.stringify(s));
+  }
+
+  let dishSort = { field: "rating" as SortField, dir: "desc" as SortDir, ...getSortState() };
+
+  function sortDishes(dishes: ReturnType<typeof getDishesByRestaurant>) {
+    return [...dishes].sort((a, b) => {
+      let cmp = 0;
+      if (dishSort.field === "name")   cmp = a.name.localeCompare(b.name);
+      else if (dishSort.field === "rating") cmp = a.rating - b.rating;
+      else cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      return dishSort.dir === "asc" ? cmp : -cmp;
+    });
+  }
+
+  function updateDishSortUI() {
+    document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
+      const isActive = btn.dataset.field === dishSort.field;
+      btn.classList.toggle("active", isActive);
+      const icon = btn.querySelector("i")!;
+      icon.className = isActive
+        ? `bi bi-arrow-${dishSort.dir === "asc" ? "up" : "down"}`
+        : "bi bi-arrow-down-up";
+    });
+  }
+
+  document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const field = btn.dataset.field as SortField;
+      if (dishSort.field === field) {
+        dishSort.dir = dishSort.dir === "asc" ? "desc" : "asc";
+      } else {
+        dishSort.field = field;
+        dishSort.dir = field === "rating" ? "desc" : "asc";
+      }
+      setSortState(dishSort);
+      updateDishSortUI();
+      renderDishes();
+    });
+  });
 
   // ─── Render header ─────────────────────────────────────────────────────────
 
-  const headerEl = document.getElementById("restaurant-header")!;
+  const headerEl    = document.getElementById("restaurant-header")!;
   const dishesListEl = document.getElementById("dishes-list")!;
 
   function renderHeader() {
-    const avg = getRestaurantAverage(restaurant!.id);
+    const avg      = getRestaurantAverage(restaurant!.id);
+    const dishes   = getDishesByRestaurant(restaurant!.id);
     const isPending = restaurant!.status === "pending";
     headerEl.innerHTML = `
       <div class="rh-card">
         <div class="rh-top">
           ${getRatingBadgeHTML(avg)}
-          ${isPending ? `<span class="pending-tag"><i class="bi bi-bookmark"></i> Pendiente</span>` : ""}
+          <div class="rh-meta">
+            <h1 class="rh-name">${escapeHtml(restaurant!.name)}</h1>
+            <div class="rh-pills">
+              ${isPending
+                ? `<span class="pending-tag"><i class="bi bi-bookmark"></i> Pendiente</span>`
+                : `<span class="dish-count-pill"><i class="bi bi-journal-text"></i> ${dishes.length} ${dishes.length === 1 ? "plato" : "platos"}</span>`
+              }
+            </div>
+          </div>
         </div>
-        <h1 class="rh-name">${escapeHtml(restaurant!.name)}</h1>
         ${restaurant!.notes ? `<p class="rh-notes">${escapeHtml(restaurant!.notes)}</p>` : ""}
-      </div>
-    `;
+      </div>`;
   }
 
   // ─── Render dishes ─────────────────────────────────────────────────────────
 
   function renderDishes() {
-    const dishes = getDishesByRestaurant(restaurant!.id);
     renderHeader();
+    const dishes = sortDishes(getDishesByRestaurant(restaurant!.id));
 
     if (dishes.length === 0) {
       dishesListEl.innerHTML = `
         <div class="empty-state">
-          <i class="bi bi-fork-knife"></i>
+          <i class="bi bi-egg-fried"></i>
           <p>Aún no hay platos registrados.</p>
           <p class="empty-hint">Agrega el primer plato con el botón de arriba.</p>
         </div>`;
@@ -145,30 +239,25 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     }
 
     dishesListEl.innerHTML = dishes.map(renderDishCard).join("");
-    wireDishActions();
+    wireDishActions(dishes);
   }
 
   // ─── Dish actions wiring ───────────────────────────────────────────────────
 
-  function wireDishActions() {
+  function wireDishActions(dishes: ReturnType<typeof getDishesByRestaurant>) {
     dishesListEl.querySelectorAll<HTMLButtonElement>(".btn-edit-dish").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const dishId = btn.dataset.id!;
-        const dish = getDishesByRestaurant(restaurant!.id).find((d) => d.id === dishId);
+        const dish = dishes.find((d) => d.id === btn.dataset.id);
         if (dish) (window as any).dishForm.open("edit", restaurant!.id, dish);
       });
     });
 
     dishesListEl.querySelectorAll<HTMLButtonElement>(".btn-delete-dish").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const dishId = btn.dataset.id!;
-        const dish = getDishesByRestaurant(restaurant!.id).find((d) => d.id === dishId);
+        const dish = dishes.find((d) => d.id === btn.dataset.id);
         (window as any).confirmDialog.show(
           `¿Eliminar el plato "${dish?.name}"?`,
-          () => {
-            deleteDish(dishId);
-            emit("dish:deleted", dishId);
-          }
+          () => { deleteDish(btn.dataset.id!); emit("dish:deleted", btn.dataset.id); }
         );
       });
     });
@@ -180,16 +269,12 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     (window as any).dishForm.open("create", restaurant!.id);
   });
 
-  // ─── Event listeners ───────────────────────────────────────────────────────
+  // ─── Eventos ───────────────────────────────────────────────────────────────
 
   on("dish:created", () => {
-    // Si el restaurante estaba pendiente, al agregar el primer plato pasa a visitado
     if (restaurant!.status === "pending") {
       const updated = markAsVisited(restaurant!.id);
-      if (updated) {
-        restaurant = updated;
-        emit("restaurant:visited", updated);
-      }
+      if (updated) { restaurant = updated; emit("restaurant:visited", updated); }
     }
     renderDishes();
   });
@@ -198,5 +283,6 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
   // ─── Init ──────────────────────────────────────────────────────────────────
 
+  updateDishSortUI();
   renderDishes();
 </script>

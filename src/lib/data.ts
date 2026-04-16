@@ -1,3 +1,5 @@
+import { supabase } from "./supabase.ts";
+
 // ─── Interfaces ────────────────────────────────────────────────────────────────
 
 export interface Restaurant {
@@ -12,23 +14,72 @@ export interface Dish {
   id: string;
   restaurantId: string;
   name: string;
-  rating: number; // 1–10
+  rating: number; // 1–10, soporta decimales (ej: 7.5)
   notes: string;
   createdAt: string;
 }
 
-// ─── Storage keys ──────────────────────────────────────────────────────────────
+// ─── Cache local ───────────────────────────────────────────────────────────────
 
-const KEYS = {
-  restaurants: "staurant_restaurants",
-  dishes: "staurant_dishes",
-} as const;
+interface AppCache {
+  userId: string;
+  restaurants: Restaurant[];
+  dishes: Dish[];
+}
+
+const CACHE_KEY = "staurant_cache_v2";
+let _userId: string | null = null;
+
+function readCache(): AppCache | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    return raw ? (JSON.parse(raw) as AppCache) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(c: AppCache): void {
+  localStorage.setItem(CACHE_KEY, JSON.stringify(c));
+}
+
+function getCache(): AppCache {
+  const c = readCache();
+  if (!c || c.userId !== _userId) return { userId: _userId!, restaurants: [], dishes: [] };
+  return c;
+}
+
+/** Llama esto al inicio de cada página protegida.
+ *  - Si hay caché válido → no hace petición a Supabase.
+ *  - Primera vez → carga desde Supabase y guarda en caché. */
+export async function initCache(): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  _userId = user.id;
+
+  const cached = readCache();
+  if (cached?.userId === _userId) return; // cache válido, nada que hacer
+
+  // Primera vez: cargar desde Supabase
+  const [rRes, dRes] = await Promise.all([
+    supabase.from("restaurants").select("*").eq("user_id", _userId).order("created_at", { ascending: false }),
+    supabase.from("dishes").select("*").eq("user_id", _userId).order("created_at", { ascending: false }),
+  ]);
+
+  writeCache({
+    userId: _userId,
+    restaurants: (rRes.data ?? []).map(toRestaurant),
+    dishes: (dRes.data ?? []).map(toDish),
+  });
+}
+
+/** Borra el caché local (llamar en logout). */
+export function clearCache(): void {
+  localStorage.removeItem(CACHE_KEY);
+  _userId = null;
+}
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
-
-function generateId(): string {
-  return crypto.randomUUID();
-}
 
 export function escapeHtml(str: string): string {
   return str
@@ -38,98 +89,148 @@ export function escapeHtml(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
-// ─── Restaurants ───────────────────────────────────────────────────────────────
+function toRestaurant(row: Record<string, unknown>): Restaurant {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    status: row.status as "visited" | "pending",
+    notes: row.notes as string,
+    createdAt: row.created_at as string,
+  };
+}
+
+function toDish(row: Record<string, unknown>): Dish {
+  return {
+    id: row.id as string,
+    restaurantId: row.restaurant_id as string,
+    name: row.name as string,
+    rating: Number(row.rating),
+    notes: row.notes as string,
+    createdAt: row.created_at as string,
+  };
+}
+
+/** Dispara una operación Supabase en segundo plano sin bloquear la UI. */
+function bgSync(fn: () => Promise<unknown>): void {
+  fn().catch((err) => console.error("[staurant sync]", err));
+}
+
+// ─── Restaurants (síncronos — leen del caché) ──────────────────────────────────
 
 export function getRestaurants(): Restaurant[] {
-  try {
-    return JSON.parse(localStorage.getItem(KEYS.restaurants) ?? "[]");
-  } catch {
-    return [];
-  }
+  return getCache().restaurants;
 }
 
-function saveRestaurants(list: Restaurant[]): void {
-  localStorage.setItem(KEYS.restaurants, JSON.stringify(list));
-}
-
-export function createRestaurant(
-  data: Omit<Restaurant, "id" | "createdAt">
-): Restaurant {
-  const restaurant: Restaurant = {
-    ...data,
-    id: generateId(),
+export function createRestaurant(input: Pick<Restaurant, "name" | "notes">): Restaurant {
+  const r: Restaurant = {
+    id: crypto.randomUUID(),
+    name: input.name,
+    notes: input.notes,
+    status: "pending",
     createdAt: new Date().toISOString(),
   };
-  saveRestaurants([...getRestaurants(), restaurant]);
-  return restaurant;
+  const cache = getCache();
+  cache.restaurants.unshift(r);
+  writeCache(cache);
+
+  bgSync(() =>
+    supabase.from("restaurants").insert({
+      id: r.id, user_id: _userId,
+      name: r.name, notes: r.notes,
+      status: r.status, created_at: r.createdAt,
+    })
+  );
+  return r;
 }
 
 export function updateRestaurant(
   id: string,
-  data: Partial<Omit<Restaurant, "id" | "createdAt">>
+  input: Partial<Pick<Restaurant, "name" | "notes" | "status">>
 ): Restaurant | null {
-  const all = getRestaurants();
-  const idx = all.findIndex((r) => r.id === id);
+  const cache = getCache();
+  const idx = cache.restaurants.findIndex((r) => r.id === id);
   if (idx === -1) return null;
-  all[idx] = { ...all[idx], ...data };
-  saveRestaurants(all);
-  return all[idx];
+  cache.restaurants[idx] = { ...cache.restaurants[idx], ...input };
+  writeCache(cache);
+
+  const patch: Record<string, unknown> = {};
+  if (input.name !== undefined) patch.name = input.name;
+  if (input.notes !== undefined) patch.notes = input.notes;
+  if (input.status !== undefined) patch.status = input.status;
+  bgSync(() => supabase.from("restaurants").update(patch).eq("id", id));
+
+  return cache.restaurants[idx];
 }
 
 export function deleteRestaurant(id: string): void {
-  saveRestaurants(getRestaurants().filter((r) => r.id !== id));
-  saveDishes(getDishes().filter((d) => d.restaurantId !== id));
+  const cache = getCache();
+  cache.restaurants = cache.restaurants.filter((r) => r.id !== id);
+  cache.dishes = cache.dishes.filter((d) => d.restaurantId !== id);
+  writeCache(cache);
+  bgSync(() => supabase.from("restaurants").delete().eq("id", id));
 }
 
 export function markAsVisited(id: string): Restaurant | null {
   return updateRestaurant(id, { status: "visited" });
 }
 
-// ─── Dishes ────────────────────────────────────────────────────────────────────
-
-export function getDishes(): Dish[] {
-  try {
-    return JSON.parse(localStorage.getItem(KEYS.dishes) ?? "[]");
-  } catch {
-    return [];
-  }
-}
-
-function saveDishes(list: Dish[]): void {
-  localStorage.setItem(KEYS.dishes, JSON.stringify(list));
-}
+// ─── Dishes (síncronos — leen del caché) ──────────────────────────────────────
 
 export function getDishesByRestaurant(restaurantId: string): Dish[] {
-  return getDishes().filter((d) => d.restaurantId === restaurantId);
+  return getCache().dishes.filter((d) => d.restaurantId === restaurantId);
 }
 
-export function createDish(data: Omit<Dish, "id" | "createdAt">): Dish {
-  const dish: Dish = {
-    ...data,
-    id: generateId(),
+export function createDish(input: Pick<Dish, "restaurantId" | "name" | "rating" | "notes">): Dish {
+  const d: Dish = {
+    id: crypto.randomUUID(),
+    restaurantId: input.restaurantId,
+    name: input.name,
+    rating: input.rating,
+    notes: input.notes,
     createdAt: new Date().toISOString(),
   };
-  saveDishes([...getDishes(), dish]);
-  return dish;
+  const cache = getCache();
+  cache.dishes.unshift(d);
+  writeCache(cache);
+
+  bgSync(() =>
+    supabase.from("dishes").insert({
+      id: d.id, user_id: _userId,
+      restaurant_id: d.restaurantId,
+      name: d.name, rating: d.rating,
+      notes: d.notes, created_at: d.createdAt,
+    })
+  );
+  return d;
 }
 
 export function updateDish(
   id: string,
-  data: Partial<Omit<Dish, "id" | "createdAt">>
+  input: Partial<Pick<Dish, "name" | "rating" | "notes">>
 ): Dish | null {
-  const all = getDishes();
-  const idx = all.findIndex((d) => d.id === id);
+  const cache = getCache();
+  const idx = cache.dishes.findIndex((d) => d.id === id);
   if (idx === -1) return null;
-  all[idx] = { ...all[idx], ...data };
-  saveDishes(all);
-  return all[idx];
+  cache.dishes[idx] = { ...cache.dishes[idx], ...input };
+  writeCache(cache);
+
+  const patch: Record<string, unknown> = {};
+  if (input.name !== undefined) patch.name = input.name;
+  if (input.rating !== undefined) patch.rating = input.rating;
+  if (input.notes !== undefined) patch.notes = input.notes;
+  bgSync(() => supabase.from("dishes").update(patch).eq("id", id));
+
+  return cache.dishes[idx];
 }
 
 export function deleteDish(id: string): void {
-  saveDishes(getDishes().filter((d) => d.id !== id));
+  const cache = getCache();
+  cache.dishes = cache.dishes.filter((d) => d.id !== id);
+  writeCache(cache);
+  bgSync(() => supabase.from("dishes").delete().eq("id", id));
 }
 
-// ─── Derived ───────────────────────────────────────────────────────────────────
+// ─── Derived (síncronos) ───────────────────────────────────────────────────────
 
 export function getRestaurantAverage(restaurantId: string): number | null {
   const dishes = getDishesByRestaurant(restaurantId);
