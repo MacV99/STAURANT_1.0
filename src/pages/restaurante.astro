@@ -1,0 +1,202 @@
+---
+import Layout1 from "../layouts/Layout1.astro";
+import DishForm from "../components/DishForm.astro";
+import ConfirmDialog from "../components/ConfirmDialog.astro";
+---
+
+<Layout1 title="Restaurante · STAURANT">
+  <div class="detail-page">
+    <a href="/" class="back-link">
+      <i class="bi bi-arrow-left"></i> Volver
+    </a>
+
+    <div id="restaurant-header" class="restaurant-header"></div>
+
+    <div class="dishes-section">
+      <div class="dishes-top">
+        <h2 class="dishes-title">Platos</h2>
+        <button id="btn-add-dish" class="boton">
+          <i class="bi bi-plus-lg"></i> Agregar plato
+        </button>
+      </div>
+      <div id="dishes-list"></div>
+    </div>
+  </div>
+
+  <DishForm />
+  <ConfirmDialog />
+</Layout1>
+
+<style>
+  .detail-page {
+    width: 100%;
+    max-width: 760px;
+    padding: 20px 16px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .back-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--clr-primary);
+    letter-spacing: 1px;
+    width: fit-content;
+    padding: 6px 0;
+    transition: var(--transition);
+  }
+
+  .restaurant-header {
+    width: 100%;
+  }
+
+  .dishes-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .dishes-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .dishes-title {
+    font-size: 1rem;
+    letter-spacing: 2px;
+    color: var(--clr-dark);
+  }
+
+  @media (hover: hover) {
+    .back-link:hover {
+      color: var(--clr-dark);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .detail-page {
+      padding: 28px 24px 80px;
+    }
+  }
+</style>
+
+<script>
+  import {
+    getRestaurants,
+    getDishesByRestaurant,
+    deleteDish,
+    getRestaurantAverage,
+    markAsVisited,
+  } from "../lib/data.ts";
+  import { renderDishCard, getRatingBadgeHTML, on, emit } from "../scripts/store.ts";
+  import { escapeHtml } from "../lib/data.ts";
+
+  // ─── Guard ─────────────────────────────────────────────────────────────────
+
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id") ?? "";
+  let restaurant = getRestaurants().find((r) => r.id === id);
+
+  if (!restaurant) {
+    window.location.href = "/";
+    throw new Error("Restaurante no encontrado");
+  }
+
+  // ─── Render header ─────────────────────────────────────────────────────────
+
+  const headerEl = document.getElementById("restaurant-header")!;
+  const dishesListEl = document.getElementById("dishes-list")!;
+
+  function renderHeader() {
+    const avg = getRestaurantAverage(restaurant!.id);
+    const isPending = restaurant!.status === "pending";
+    headerEl.innerHTML = `
+      <div class="rh-card">
+        <div class="rh-top">
+          ${getRatingBadgeHTML(avg)}
+          ${isPending ? `<span class="pending-tag"><i class="bi bi-bookmark"></i> Pendiente</span>` : ""}
+        </div>
+        <h1 class="rh-name">${escapeHtml(restaurant!.name)}</h1>
+        ${restaurant!.notes ? `<p class="rh-notes">${escapeHtml(restaurant!.notes)}</p>` : ""}
+      </div>
+    `;
+  }
+
+  // ─── Render dishes ─────────────────────────────────────────────────────────
+
+  function renderDishes() {
+    const dishes = getDishesByRestaurant(restaurant!.id);
+    renderHeader();
+
+    if (dishes.length === 0) {
+      dishesListEl.innerHTML = `
+        <div class="empty-state">
+          <i class="bi bi-fork-knife"></i>
+          <p>Aún no hay platos registrados.</p>
+          <p class="empty-hint">Agrega el primer plato con el botón de arriba.</p>
+        </div>`;
+      return;
+    }
+
+    dishesListEl.innerHTML = dishes.map(renderDishCard).join("");
+    wireDishActions();
+  }
+
+  // ─── Dish actions wiring ───────────────────────────────────────────────────
+
+  function wireDishActions() {
+    dishesListEl.querySelectorAll<HTMLButtonElement>(".btn-edit-dish").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const dishId = btn.dataset.id!;
+        const dish = getDishesByRestaurant(restaurant!.id).find((d) => d.id === dishId);
+        if (dish) (window as any).dishForm.open("edit", restaurant!.id, dish);
+      });
+    });
+
+    dishesListEl.querySelectorAll<HTMLButtonElement>(".btn-delete-dish").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const dishId = btn.dataset.id!;
+        const dish = getDishesByRestaurant(restaurant!.id).find((d) => d.id === dishId);
+        (window as any).confirmDialog.show(
+          `¿Eliminar el plato "${dish?.name}"?`,
+          () => {
+            deleteDish(dishId);
+            emit("dish:deleted", dishId);
+          }
+        );
+      });
+    });
+  }
+
+  // ─── Add dish button ───────────────────────────────────────────────────────
+
+  document.getElementById("btn-add-dish")!.addEventListener("click", () => {
+    (window as any).dishForm.open("create", restaurant!.id);
+  });
+
+  // ─── Event listeners ───────────────────────────────────────────────────────
+
+  on("dish:created", () => {
+    // Si el restaurante estaba pendiente, al agregar el primer plato pasa a visitado
+    if (restaurant!.status === "pending") {
+      const updated = markAsVisited(restaurant!.id);
+      if (updated) {
+        restaurant = updated;
+        emit("restaurant:visited", updated);
+      }
+    }
+    renderDishes();
+  });
+  on("dish:updated", () => renderDishes());
+  on("dish:deleted", () => renderDishes());
+
+  // ─── Init ──────────────────────────────────────────────────────────────────
+
+  renderDishes();
+</script>

@@ -1,0 +1,189 @@
+<div id="restaurant-form-overlay" class="overlay" aria-modal="true" role="dialog">
+  <div class="form-box">
+    <div class="form-header">
+      <h2 id="restaurant-form-title">Nuevo restaurante</h2>
+      <button id="restaurant-form-close" class="btn-close boton2" aria-label="Cerrar">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <form id="restaurant-form" novalidate>
+      <input type="hidden" id="rf-id" />
+
+      <label for="rf-name">
+        Nombre <span class="required">*</span>
+        <input type="text" id="rf-name" required placeholder="El Cielo, La Plaza..." />
+      </label>
+
+      <label for="rf-notes">
+        Notas <span class="optional">(opcional)</span>
+        <textarea id="rf-notes" rows="3" placeholder="Ambiente, ubicación, lo que quieras recordar..."></textarea>
+      </label>
+
+      <p id="rf-error" class="form-error" aria-live="polite"></p>
+
+      <div class="form-footer">
+        <button type="button" id="restaurant-form-cancel" class="boton2">Cancelar</button>
+        <button type="submit" class="boton" id="rf-submit">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  .form-box {
+    background: var(--clr-white);
+    border: solid 1px var(--clr-border);
+    border-radius: 20px;
+    padding: 24px 20px;
+    width: 92%;
+    max-width: 460px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    max-height: 90dvh;
+    overflow-y: auto;
+  }
+
+  .form-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .form-header h2 {
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    color: var(--clr-dark);
+  }
+
+  .btn-close {
+    padding: 6px 10px;
+    border-radius: 10px;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--clr-dark2);
+    text-transform: uppercase;
+  }
+
+  label input,
+  label textarea {
+    margin-top: 5px;
+    border-radius: var(--border-radius);
+    width: 100%;
+  }
+
+  .required {
+    color: #e05050;
+    font-weight: 700;
+  }
+
+  .optional {
+    font-weight: 400;
+    color: var(--clr-text);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .form-error {
+    font-size: 0.85rem;
+    color: #e05050;
+    min-height: 1.2em;
+  }
+
+  .form-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 6px;
+  }
+
+  @media (min-width: 768px) {
+    .form-box {
+      padding: 28px 28px;
+    }
+  }
+</style>
+
+<script>
+  import type { Restaurant } from "../lib/data.ts";
+  import { createRestaurant, updateRestaurant } from "../lib/data.ts";
+  import { emit } from "../scripts/store.ts";
+
+  const overlay = document.getElementById("restaurant-form-overlay")!;
+  const form = document.getElementById("restaurant-form") as HTMLFormElement;
+  const titleEl = document.getElementById("restaurant-form-title")!;
+  const idInput = document.getElementById("rf-id") as HTMLInputElement;
+  const nameInput = document.getElementById("rf-name") as HTMLInputElement;
+  const notesInput = document.getElementById("rf-notes") as HTMLTextAreaElement;
+  const errorEl = document.getElementById("rf-error")!;
+  const closeBtn = document.getElementById("restaurant-form-close")!;
+  const cancelBtn = document.getElementById("restaurant-form-cancel")!;
+
+  function open(mode: "create" | "edit", data?: Restaurant) {
+    errorEl.textContent = "";
+    form.reset();
+
+    if (mode === "edit" && data) {
+      titleEl.textContent = "Editar restaurante";
+      idInput.value = data.id;
+      nameInput.value = data.name;
+      notesInput.value = data.notes;
+    } else {
+      titleEl.textContent = "Nuevo restaurante";
+      idInput.value = "";
+    }
+
+    overlay.classList.add("is-open");
+    nameInput.focus();
+  }
+
+  function close() {
+    overlay.classList.remove("is-open");
+  }
+
+  closeBtn.addEventListener("click", close);
+  cancelBtn.addEventListener("click", close);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    errorEl.textContent = "";
+
+    const name = nameInput.value.trim();
+    if (!name) {
+      errorEl.textContent = "El nombre es obligatorio.";
+      nameInput.focus();
+      return;
+    }
+
+    const notes = notesInput.value.trim();
+    const id = idInput.value;
+
+    if (id) {
+      const updated = updateRestaurant(id, { name, notes });
+      if (updated) emit("restaurant:updated", updated);
+    } else {
+      const created = createRestaurant({ name, status: "pending", notes });
+      emit("restaurant:created", created);
+    }
+
+    close();
+  });
+
+  // Expose API globally
+  (window as any).restaurantForm = { open, close };
+</script>

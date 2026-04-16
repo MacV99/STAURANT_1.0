@@ -1,0 +1,68 @@
+<div id="confirm-overlay" class="overlay" aria-modal="true" role="dialog">
+  <div class="confirm-box">
+    <p id="confirm-message">¿Estás seguro?</p>
+    <div class="confirm-actions">
+      <button id="confirm-cancel" class="boton2">Cancelar</button>
+      <button id="confirm-ok" class="boton btn-danger">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .confirm-box {
+    background: var(--clr-white);
+    border: solid 1px var(--clr-border);
+    border-radius: 18px;
+    padding: 28px 24px;
+    width: 90%;
+    max-width: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  #confirm-message {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--clr-dark);
+    text-align: center;
+  }
+
+  .confirm-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+</style>
+
+<script>
+  const overlay = document.getElementById("confirm-overlay")!;
+  const msgEl = document.getElementById("confirm-message")!;
+  const cancelBtn = document.getElementById("confirm-cancel")!;
+  const okBtn = document.getElementById("confirm-ok")!;
+
+  let _onConfirm: (() => void) | null = null;
+
+  function show(message: string, onConfirm: () => void) {
+    msgEl.textContent = message;
+    _onConfirm = onConfirm;
+    overlay.classList.add("is-open");
+  }
+
+  function hide() {
+    overlay.classList.remove("is-open");
+    _onConfirm = null;
+  }
+
+  cancelBtn.addEventListener("click", hide);
+  okBtn.addEventListener("click", () => {
+    _onConfirm?.();
+    hide();
+  });
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) hide();
+  });
+
+  // Expose API globally
+  (window as any).confirmDialog = { show, hide };
+</script>

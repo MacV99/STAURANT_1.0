@@ -2,22 +2,23 @@
 
 :root {
   /* COLORES - Ajusta según tu proyecto */
-  --clr-primary: #00588b;
+  --clr-primary: #9b47ab;
+  --clr-primary-dark: #7d3589;
   --clr-dark: #1a1a1a;
   --clr-dark2: #333333;
-  --clr-white: #f7f7f7;
-  --clr-white2: #ebebeb;
+  --clr-white: #faf4fb;
+  --clr-white2: #f0e4f5;
 
   /* --clr-gray: #646464; */
   --clr-text: #363636;
-  --clr-border: #e3e3e3;
+  --clr-border: #dec8e6;
 
   /* TIPOGRAFÍA */
   --font-main: "Montserrat", sans-serif;
 
   /* EFECTOS Y TIMING */
   --transition: 0.12s ease;
-  --border-radius: 10px;
+  --border-radius: 12px;
 }
 
 /* === RESET BÁSICO === */

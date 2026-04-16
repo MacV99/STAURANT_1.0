@@ -13,13 +13,14 @@ import Navbar from "../components/navbar.astro";
     justify-content: space-between;
     position: sticky;
     top: 10px;
-    background: rgba(255, 255, 255, 0.95);
-    box-shadow: 0 0 14px rgba(0, 0, 0, 0.35);
+    background: rgba(250, 244, 251, 0.97);
+    box-shadow: 0 4px 20px rgba(155, 71, 171, 0.12);
+    border: solid 1px rgba(222, 200, 230, 0.6);
     border-radius: 20px;
     width: 95%;
-    height: 80px;
+    height: 72px;
     margin: 10px auto;
-    padding: 12px;
+    padding: 12px 16px;
     transition: var(--transition);
     z-index: 100;
   }
@@ -36,19 +37,17 @@ import Navbar from "../components/navbar.astro";
     border-radius: 12px;
   }
 
-  @media (min-width: 750px) {
+  @media (hover: hover) {
+    header:hover {
+      background: rgba(250, 244, 251, 1);
+    }
+  }
+
+  @media (min-width: 768px) {
     header {
-      background: rgba(255, 255, 255, 0.6);
-      backdrop-filter: blur(5px);
+      backdrop-filter: blur(8px);
+      background: rgba(250, 244, 251, 0.85);
       width: 98%;
     }
   }
-
-  @media (hover: hover) {
-    header:hover {
-      background-color: var(--clr-white);
-    }
-  }
 </style>
-
-<script></script>

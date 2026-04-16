@@ -1,76 +1,173 @@
 ---
 import Layout1 from "../layouts/Layout1.astro";
-
-import Hero from "../sections/hero.astro";
-import MisionVision from "../components/mision-vision.astro";
+import TabBar from "../components/TabBar.astro";
+import RestaurantForm from "../components/RestaurantForm.astro";
+import ConfirmDialog from "../components/ConfirmDialog.astro";
 ---
 
-<Layout1 title="Home">
-	<Hero />
+<Layout1 title="STAURANT">
+  <div class="app-page">
+    <TabBar />
+    <div id="tab-visitados" class="tab-content" role="tabpanel" hidden></div>
+    <div id="tab-pendientes" class="tab-content" role="tabpanel" hidden></div>
+  </div>
 
-	<section id="puntos">
-		<div class="flex-row">
-			<div>
-				<i class="bi bi-pin-angle-fill"></i>
-				<p>Registro personal de experiencias</p>
-			</div>
-			<div>
-				<i class="bi bi-star-fill"></i>
-				<p>Calificación precisa por plato</p>
-			</div>
-			<div>
-				<i class="bi bi-people-fill"></i>
-				<p>Red social de recomendaciones reales</p>
-			</div>
-			<div>
-				<i class="bi bi-fork-knife"></i>
-				<p>Ecosistema para restaurantes oficiales</p>
-			</div>
-			<div>
-				<i class="bi bi-clipboard-data-fill"></i>
-				<p>Datos y estadísticas gastronómicas reales</p>
-			</div>
-		</div>
-	</section>
-	<MisionVision />
+  <button id="btn-add-restaurant" class="fab" aria-label="Agregar restaurante">
+    <i class="bi bi-plus-lg"></i>
+  </button>
+
+  <RestaurantForm />
+  <ConfirmDialog />
 </Layout1>
 
 <style>
-	#puntos {
-	}
-	#puntos > div {
-		flex-wrap: wrap;
-		gap: 10px;
-		justify-content: center;
-	}
+  .app-page {
+    width: 100%;
+    max-width: 1100px;
+    padding: 20px 16px 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
 
-	#puntos > div > div {
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		max-width: fit-content;
-		padding: 10px 15px;
-		background-color: #fff;
-		border: solid 1px var(--clr-border);
-		border-radius: 15px;
-		gap: 10px;
-	}
+  .tab-content {
+    width: 100%;
+  }
 
-	#puntos .bi {
-		font-size: 1.4rem;
-		color: var(--clr-dark);
-		transition: var(--transition);
-	}
-
-	@media (min-width: 750px) {
-		#puntos > div > div {
-		}
-	}
-
-	@media (hover: hover) {
-		#puntos > div > div:hover .bi,
-		#puntos > div > div:hover p {
-			color: var(--clr-main);
-		}
-	}
+  @media (min-width: 768px) {
+    .app-page {
+      padding: 28px 24px 100px;
+    }
+  }
 </style>
+
+<script>
+  import {
+    getRestaurants,
+    deleteRestaurant,
+    getRestaurantAverage,
+  } from "../lib/data.ts";
+  import { renderRestaurantCard, on } from "../scripts/store.ts";
+
+  // ─── Tab switching ──────────────────────────────────────────────────────────
+
+  const tabVisitados = document.getElementById("tab-visitados")!;
+  const tabPendientes = document.getElementById("tab-pendientes")!;
+  const tabBtns = document.querySelectorAll<HTMLButtonElement>(".tab-btn");
+
+  function getActiveTab(): "visitados" | "pendientes" {
+    const params = new URLSearchParams(window.location.search);
+    return (params.get("tab") as "visitados" | "pendientes") ?? "visitados";
+  }
+
+  function activateTab(tab: "visitados" | "pendientes") {
+    tabVisitados.hidden = tab !== "visitados";
+    tabPendientes.hidden = tab !== "pendientes";
+    tabBtns.forEach((btn) => {
+      const isActive = btn.dataset.tab === tab;
+      btn.classList.toggle("active", isActive);
+      btn.setAttribute("aria-selected", String(isActive));
+    });
+    history.replaceState(null, "", `/?tab=${tab}`);
+  }
+
+  tabBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      activateTab(btn.dataset.tab as "visitados" | "pendientes");
+    });
+  });
+
+  // ─── Rendering ─────────────────────────────────────────────────────────────
+
+  function renderList(status: "visited" | "pending", container: HTMLElement) {
+    const restaurants = getRestaurants().filter((r) => r.status === status);
+
+    if (restaurants.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="bi bi-${status === "visited" ? "journal-check" : "bookmark"}"></i>
+          <p>${status === "visited" ? "Aún no has registrado restaurantes visitados." : "No tienes restaurantes pendientes."}</p>
+          ${status === "visited" ? '<p class="empty-hint">Agrega uno con el botón <strong>+</strong></p>' : ""}
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = `<div class="cards-grid">${restaurants
+      .map((r) => renderRestaurantCard(r, getRestaurantAverage(r.id)))
+      .join("")}</div>`;
+
+    wireCardActions(container);
+  }
+
+  function updateCounts() {
+    const all = getRestaurants();
+    const visitedCount = all.filter((r) => r.status === "visited").length;
+    const pendingCount = all.filter((r) => r.status === "pending").length;
+    const cv = document.getElementById("count-visitados");
+    const cp = document.getElementById("count-pendientes");
+    if (cv) cv.textContent = String(visitedCount);
+    if (cp) cp.textContent = String(pendingCount);
+  }
+
+  function renderBoth() {
+    renderList("visited", tabVisitados);
+    renderList("pending", tabPendientes);
+    updateCounts();
+  }
+
+  // ─── Card actions wiring ────────────────────────────────────────────────────
+
+  function wireCardActions(container: HTMLElement) {
+    container.querySelectorAll<HTMLElement>(".card-clickable").forEach((card) => {
+      card.addEventListener("click", (e) => {
+        const target = e.target as HTMLElement;
+        if (target.closest("button")) return;
+        const href = card.dataset.href;
+        if (href) window.location.href = href;
+      });
+    });
+
+    container.querySelectorAll<HTMLButtonElement>(".btn-edit-restaurant").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.id!;
+        const r = getRestaurants().find((r) => r.id === id);
+        if (r) (window as any).restaurantForm.open("edit", r);
+      });
+    });
+
+    container.querySelectorAll<HTMLButtonElement>(".btn-delete-restaurant").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.id!;
+        const r = getRestaurants().find((r) => r.id === id);
+        (window as any).confirmDialog.show(
+          `¿Eliminar "${r?.name}"? Se borrarán también sus platos.`,
+          () => {
+            deleteRestaurant(id);
+            renderBoth();
+          }
+        );
+      });
+    });
+
+  }
+
+  // ─── Add restaurant button ──────────────────────────────────────────────────
+
+  document.getElementById("btn-add-restaurant")!.addEventListener("click", () => {
+    (window as any).restaurantForm.open("create");
+  });
+
+  // ─── Event listeners ───────────────────────────────────────────────────────
+
+  on("restaurant:created", () => {
+    renderBoth();
+    activateTab("pendientes");
+  });
+  on("restaurant:updated", () => renderBoth());
+  on("restaurant:visited", () => renderBoth());
+
+  // ─── Init ──────────────────────────────────────────────────────────────────
+
+  renderBoth();
+  activateTab(getActiveTab());
+</script>
