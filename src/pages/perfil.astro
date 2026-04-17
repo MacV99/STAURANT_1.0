@@ -208,6 +208,12 @@ import Layout1 from "../layouts/Layout1.astro";
   if (!session) { window.location.href = "/login"; throw new Error("No auth"); }
   await initCache(session.user.id);
 
+  // ─── Back link contextual ───────────────────────────────────────────────────
+
+  const fromTab = new URLSearchParams(window.location.search).get("from") ?? "visitados";
+  const backLinkEl = document.querySelector(".back-link") as HTMLAnchorElement;
+  if (backLinkEl) backLinkEl.href = `/?tab=${fromTab}`;
+
   // ─── Cargar datos de perfil ─────────────────────────────────────────────────
 
   const user = session.user;

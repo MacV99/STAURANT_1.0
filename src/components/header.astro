@@ -21,6 +21,9 @@ import Navbar from "../components/navbar.astro";
   const { data: { session } } = await supabase.auth.getSession();
   if (session) {
     btn.hidden = false;
+    // Pasar el tab activo al link de perfil para el back link contextual
+    const currentTab = new URLSearchParams(window.location.search).get("tab");
+    if (currentTab) btn.href = `/perfil?from=${currentTab}`;
     const { data: profile } = await supabase
       .from("profiles")
       .select("name")

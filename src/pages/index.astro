@@ -137,6 +137,15 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     return (p.get("tab") as "visitados" | "pendientes") ?? "visitados";
   }
 
+  const sortBarEl = document.querySelector<HTMLElement>(".sort-bar")!;
+
+  function updateSortBarVisibility() {
+    const activeTab = getActiveTab();
+    const status = activeTab === "visitados" ? "visited" : "pending";
+    const count = getRestaurants().filter((r) => r.status === status).length;
+    sortBarEl.hidden = count < 2;
+  }
+
   function activateTab(tab: "visitados" | "pendientes") {
     tabVisitados.hidden  = tab !== "visitados";
     tabPendientes.hidden = tab !== "pendientes";
@@ -146,6 +155,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
       btn.setAttribute("aria-selected", String(active));
     });
     history.replaceState(null, "", `/?tab=${tab}`);
+    updateSortBarVisibility();
   }
 
   tabBtns.forEach((btn) =>
@@ -187,6 +197,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     renderList("visited",  tabVisitados);
     renderList("pending", tabPendientes);
     updateCounts();
+    updateSortBarVisibility();
   }
 
   // ─── Card actions ───────────────────────────────────────────────────────────

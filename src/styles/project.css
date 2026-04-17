@@ -161,8 +161,8 @@
 
 .card-actions button {
   font-size: 0.9rem;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   border-radius: 50%;
   letter-spacing: 0;
@@ -238,8 +238,8 @@
 
 .dish-actions button {
   font-size: 0.9rem;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   border-radius: 50%;
   letter-spacing: 0;
@@ -278,6 +278,34 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.rh-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.rh-actions button {
+  font-size: 0.9rem;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  letter-spacing: 0;
+  text-transform: none;
+  background: var(--clr-white2);
+  color: var(--clr-primary);
+  border-color: var(--clr-border);
+}
+
+.rh-actions .btn-delete-rh {
+  color: #b02a3a;
+  background: #fce8ec;
+  border-color: #f0b8c0;
 }
 
 .rh-pills {
@@ -411,13 +439,25 @@
 @media (hover: hover) {
 
   .card-actions .btn-edit-restaurant:hover,
-  .dish-actions .btn-edit-dish:hover {
+  .dish-actions .btn-edit-dish:hover,
+  .rh-actions .btn-edit-rh:hover {
     background: var(--clr-border);
   }
 
   .card-actions .btn-delete-restaurant:hover,
-  .dish-actions .btn-delete-dish:hover {
+  .dish-actions .btn-delete-dish:hover,
+  .rh-actions .btn-delete-rh:hover {
     background: #f0b8c0;
+  }
+
+  /* Botones de acción: sutiles por defecto, visibles al hover de la card */
+  .card-actions {
+    opacity: 0.4;
+    transition: opacity var(--transition);
+  }
+
+  .restaurant-card:hover .card-actions {
+    opacity: 1;
   }
 
   .restaurant-card.card-clickable:hover {

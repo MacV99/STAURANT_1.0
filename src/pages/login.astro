@@ -2,7 +2,7 @@
 import Layout1 from "../layouts/Layout1.astro";
 ---
 
-<Layout1 title="Acceder · STAURANT">
+<Layout1 title="Acceder · STAURANT" bare>
   <div class="auth-page">
     <div class="auth-card">
       <!-- Logo -->
@@ -27,7 +27,12 @@ import Layout1 from "../layouts/Layout1.astro";
         </label>
         <label>
           <span class="field-label">Contraseña</span>
-          <input type="password" id="login-password" autocomplete="current-password" placeholder="••••••••" required />
+          <div class="pw-wrapper">
+            <input type="password" id="login-password" autocomplete="current-password" placeholder="••••••••" required />
+            <button type="button" class="pw-toggle" id="toggle-login-pw" aria-label="Mostrar contraseña">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
         </label>
         <button type="submit" class="btn-primary" id="btn-login">Entrar</button>
       </form>
@@ -44,7 +49,12 @@ import Layout1 from "../layouts/Layout1.astro";
         </label>
         <label>
           <span class="field-label">Contraseña <span class="field-hint">(mín. 6 caracteres)</span></span>
-          <input type="password" id="reg-password" autocomplete="new-password" placeholder="••••••••" required />
+          <div class="pw-wrapper">
+            <input type="password" id="reg-password" autocomplete="new-password" placeholder="••••••••" required />
+            <button type="button" class="pw-toggle" id="toggle-reg-pw" aria-label="Mostrar contraseña">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
         </label>
         <button type="submit" class="btn-primary" id="btn-register">Crear cuenta</button>
       </form>
@@ -56,7 +66,7 @@ import Layout1 from "../layouts/Layout1.astro";
 <style>
   .auth-page {
     width: 100%;
-    min-height: calc(100dvh - 92px);
+    min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -170,6 +180,45 @@ import Layout1 from "../layouts/Layout1.astro";
     width: 100%;
   }
 
+  /* Password toggle */
+  .pw-wrapper {
+    position: relative;
+    display: flex;
+  }
+
+  .pw-wrapper input {
+    flex: 1;
+    padding-right: 44px;
+    border-radius: var(--border-radius);
+  }
+
+  .pw-toggle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 42px;
+    background: transparent;
+    border: none;
+    color: var(--clr-text);
+    opacity: 0.45;
+    font-size: 0.95rem;
+    letter-spacing: 0;
+    text-transform: none;
+    padding: 0;
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.12s ease;
+  }
+
+  .pw-toggle:hover {
+    opacity: 0.85;
+    background: transparent;
+  }
+
   .auth-error {
     font-size: 0.85rem;
     color: #c0392b;
@@ -189,14 +238,13 @@ import Layout1 from "../layouts/Layout1.astro";
     letter-spacing: 1px;
   }
 
-
   @media (hover: hover) {
     .btn-primary:hover {
       background: var(--clr-primary-dark);
       border-color: var(--clr-primary-dark);
     }
 
-.auth-tab:not(.active):hover {
+    .auth-tab:not(.active):hover {
       color: var(--clr-primary);
     }
   }
@@ -230,7 +278,6 @@ import Layout1 from "../layouts/Layout1.astro";
     inactive.classList.remove("form-visible");
 
     active.style.display = "flex";
-    // Forzar reflow para reiniciar la animación si se alterna rápido
     active.classList.remove("form-visible");
     void active.offsetHeight;
     active.classList.add("form-visible");
@@ -239,12 +286,26 @@ import Layout1 from "../layouts/Layout1.astro";
     errorEl.textContent = "";
   }
 
-  // Estado inicial
   showTab("login");
 
   tabBtns.forEach((btn) => {
     btn.addEventListener("click", () => showTab(btn.dataset.tab as "login" | "register"));
   });
+
+  // ─── Password toggles ──────────────────────────────────────────────────────
+
+  function setupPwToggle(inputId: string, btnId: string) {
+    const input = document.getElementById(inputId) as HTMLInputElement;
+    const btn = document.getElementById(btnId) as HTMLButtonElement;
+    btn.addEventListener("click", () => {
+      const isHidden = input.type === "password";
+      input.type = isHidden ? "text" : "password";
+      btn.querySelector("i")!.className = isHidden ? "bi bi-eye-slash" : "bi bi-eye";
+    });
+  }
+
+  setupPwToggle("login-password", "toggle-login-pw");
+  setupPwToggle("reg-password", "toggle-reg-pw");
 
   // ─── Login ─────────────────────────────────────────────────────────────────
 
@@ -302,5 +363,4 @@ import Layout1 from "../layouts/Layout1.astro";
     }
     window.location.href = "/";
   });
-
 </script>

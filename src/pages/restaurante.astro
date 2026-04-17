@@ -1,6 +1,7 @@
 ---
 import Layout1 from "../layouts/Layout1.astro";
 import DishForm from "../components/DishForm.astro";
+import RestaurantForm from "../components/RestaurantForm.astro";
 import ConfirmDialog from "../components/ConfirmDialog.astro";
 ---
 
@@ -34,6 +35,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
   </div>
 
   <DishForm />
+  <RestaurantForm />
   <ConfirmDialog />
 </Layout1>
 
@@ -119,10 +121,12 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     getRestaurants,
     getDishesByRestaurant,
     deleteDish,
+    deleteRestaurant,
     getRestaurantAverage,
     markAsVisited,
     escapeHtml,
   } from "../lib/data.ts";
+  import type { Restaurant } from "../lib/data.ts";
   import { renderDishCard, getRatingBadgeHTML, on, emit } from "../scripts/store.ts";
 
   // ─── Auth + cache ───────────────────────────────────────────────────────────
@@ -135,7 +139,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id") ?? "";
-  let restaurant = getRestaurants().find((r) => r.id === id);
+  let restaurant = getRestaurants().find((r) => r.id === id) as Restaurant | undefined;
 
   const backTab = restaurant?.status === "pending" ? "pendientes" : "visitados";
   const backLink = document.getElementById("back-link") as HTMLAnchorElement;
@@ -199,6 +203,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
   const headerEl    = document.getElementById("restaurant-header")!;
   const dishesListEl = document.getElementById("dishes-list")!;
+  const sortBarEl   = document.querySelector<HTMLElement>(".sort-bar")!;
 
   function renderHeader() {
     const avg      = getRestaurantAverage(restaurant!.id);
@@ -217,9 +222,28 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
               }
             </div>
           </div>
+          <div class="rh-actions">
+            <button class="btn-edit-rh boton2" data-id="${restaurant!.id}" aria-label="Editar restaurante">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn-delete-rh boton2" data-id="${restaurant!.id}" aria-label="Eliminar restaurante">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
         </div>
         ${restaurant!.notes ? `<p class="rh-notes">${escapeHtml(restaurant!.notes)}</p>` : ""}
       </div>`;
+
+    // Cablear botones del header
+    headerEl.querySelector<HTMLButtonElement>(".btn-edit-rh")?.addEventListener("click", () => {
+      (window as any).restaurantForm.open("edit", restaurant!);
+    });
+    headerEl.querySelector<HTMLButtonElement>(".btn-delete-rh")?.addEventListener("click", () => {
+      (window as any).confirmDialog.show(
+        `¿Eliminar "${restaurant?.name}"? Se borrarán también sus platos.`,
+        () => { deleteRestaurant(restaurant!.id); window.location.href = "/"; }
+      );
+    });
   }
 
   // ─── Render dishes ─────────────────────────────────────────────────────────
@@ -227,6 +251,9 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
   function renderDishes() {
     renderHeader();
     const dishes = sortDishes(getDishesByRestaurant(restaurant!.id));
+
+    // Sort bar solo visible con 2+ platos
+    sortBarEl.hidden = dishes.length < 2;
 
     if (dishes.length === 0) {
       dishesListEl.innerHTML = `
@@ -280,6 +307,11 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
   });
   on("dish:updated", () => renderDishes());
   on("dish:deleted", () => renderDishes());
+  on("restaurant:updated", (e) => {
+    const updated = (e as CustomEvent).detail as Restaurant;
+    if (updated?.id === restaurant!.id) { restaurant = updated; }
+    renderDishes();
+  });
 
   // ─── Init ──────────────────────────────────────────────────────────────────
 
