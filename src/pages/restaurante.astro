@@ -324,17 +324,27 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     // ─── Eventos del store ────────────────────────────────────────────────────
 
     document.addEventListener("dish:created", () => {
-      if (restaurant!.status === "pending") {
-        const updated = markAsVisited(restaurant!.id);
-        if (updated) { restaurant = updated; emit("restaurant:visited", updated); }
+      // Marcar como visitado si es la primera vez. Envuelto en try/catch
+      // para que renderDishes() se ejecute siempre, incluso si algo falla.
+      try {
+        if (restaurant && restaurant.status === "pending") {
+          const updated = markAsVisited(restaurant.id);
+          if (updated) { restaurant = updated; emit("restaurant:visited", updated); }
+        }
+      } catch (err) {
+        console.error("[dish:created] markAsVisited error:", err);
       }
       renderDishes();
     }, { signal });
     document.addEventListener("dish:updated",  () => renderDishes(), { signal });
     document.addEventListener("dish:deleted",  () => renderDishes(), { signal });
     document.addEventListener("restaurant:updated", (e) => {
-      const updated = (e as CustomEvent).detail as Restaurant;
-      if (updated?.id === restaurant!.id) restaurant = updated;
+      try {
+        const updated = (e as CustomEvent).detail as Restaurant;
+        if (updated?.id === restaurant?.id) restaurant = updated;
+      } catch (err) {
+        console.error("[restaurant:updated] error:", err);
+      }
       renderDishes();
     }, { signal });
 

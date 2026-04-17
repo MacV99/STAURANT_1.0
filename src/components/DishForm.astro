@@ -288,14 +288,16 @@
       const rating = parseFloat(ratingInput.value);
       const notes = notesInput.value.trim();
 
+      // Cerrar ANTES de emitir: garantiza que el modal cierra aunque
+      // el listener del evento lance una excepción.
+      close();
+
       if (id) {
         const updated = updateDish(id, { name, rating, notes });
         if (updated) emit("dish:updated", updated);
       } else {
         emit("dish:created", createDish({ restaurantId, name, rating, notes }));
       }
-
-      close();
     };
 
     // Actualizar API global con referencias frescas al DOM actual

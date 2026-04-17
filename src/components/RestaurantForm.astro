@@ -147,87 +147,81 @@
 <script>
   import type { Restaurant } from "../lib/data.ts";
   import { createRestaurant, updateRestaurant, getRestaurants } from "../lib/data.ts";
-  // Nota: todas las funciones de data.ts son síncronas (leen del caché local)
   import { emit } from "../scripts/store.ts";
 
-  const overlay = document.getElementById("restaurant-form-overlay")!;
-  const form = document.getElementById("restaurant-form") as HTMLFormElement;
-  const titleEl = document.getElementById("restaurant-form-title")!;
-  const idInput = document.getElementById("rf-id") as HTMLInputElement;
-  const nameInput = document.getElementById("rf-name") as HTMLInputElement;
-  const notesInput = document.getElementById("rf-notes") as HTMLTextAreaElement;
-  const errorEl = document.getElementById("rf-error")!;
-  const closeBtn = document.getElementById("restaurant-form-close")!;
-  const cancelBtn = document.getElementById("restaurant-form-cancel")!;
+  // Re-inicializar en cada navegación para que open/close siempre
+  // operen sobre los elementos del DOM ACTUAL (no los del swap anterior).
+  document.addEventListener("astro:page-load", () => {
+    const overlay = document.getElementById("restaurant-form-overlay");
+    if (!overlay) return; // no está en esta página
 
-  function open(mode: "create" | "edit", data?: Restaurant) {
-    errorEl.textContent = "";
-    form.reset();
+    const form       = document.getElementById("restaurant-form") as HTMLFormElement;
+    const titleEl    = document.getElementById("restaurant-form-title")!;
+    const idInput    = document.getElementById("rf-id") as HTMLInputElement;
+    const nameInput  = document.getElementById("rf-name") as HTMLInputElement;
+    const notesInput = document.getElementById("rf-notes") as HTMLTextAreaElement;
+    const errorEl    = document.getElementById("rf-error")!;
+    const closeBtn   = document.getElementById("restaurant-form-close")!;
+    const cancelBtn  = document.getElementById("restaurant-form-cancel")!;
 
-    if (mode === "edit" && data) {
-      titleEl.textContent = "Editar restaurante";
-      idInput.value = data.id;
-      nameInput.value = data.name;
-      notesInput.value = data.notes;
-    } else {
-      titleEl.textContent = "Nuevo restaurante";
-      idInput.value = "";
-    }
-
-    overlay.classList.add("is-open");
-    nameInput.focus();
-  }
-
-  function close() {
-    overlay.classList.remove("is-open");
-  }
-
-  closeBtn.addEventListener("click", close);
-  cancelBtn.addEventListener("click", close);
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) close();
-  });
-
-  nameInput.addEventListener("input", () => {
-    const pos = nameInput.selectionStart;
-    nameInput.value = nameInput.value.toUpperCase();
-    nameInput.setSelectionRange(pos, pos);
-  });
-
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    errorEl.textContent = "";
-
-    const name = nameInput.value.trim();
-    if (!name) {
-      errorEl.textContent = "El nombre es obligatorio.";
+    function open(mode: "create" | "edit", data?: Restaurant) {
+      errorEl.textContent = "";
+      form.reset();
+      if (mode === "edit" && data) {
+        titleEl.textContent = "Editar restaurante";
+        idInput.value   = data.id;
+        nameInput.value = data.name;
+        notesInput.value = data.notes;
+      } else {
+        titleEl.textContent = "Nuevo restaurante";
+        idInput.value = "";
+      }
+      overlay.classList.add("is-open");
       nameInput.focus();
-      return;
     }
 
-    const id = idInput.value;
-    const duplicate = getRestaurants().find(
-      (r) => r.name.trim().toLowerCase() === name.toLowerCase() && r.id !== id
-    );
-    if (duplicate) {
-      errorEl.textContent = "Ya existe un restaurante con ese nombre.";
-      nameInput.focus();
-      return;
+    function close() {
+      overlay.classList.remove("is-open");
     }
 
-    const notes = notesInput.value.trim();
+    // .onclick evita acumulación de listeners si el módulo re-ejecuta
+    closeBtn.onclick  = close;
+    cancelBtn.onclick = close;
+    overlay.onclick   = (e) => { if (e.target === overlay) close(); };
 
-    if (id) {
-      const updated = updateRestaurant(id, { name, notes });
-      if (updated) emit("restaurant:updated", updated);
-    } else {
-      const created = createRestaurant({ name, notes });
-      emit("restaurant:created", created);
-    }
+    nameInput.oninput = () => {
+      const pos = nameInput.selectionStart;
+      nameInput.value = nameInput.value.toUpperCase();
+      nameInput.setSelectionRange(pos, pos);
+    };
 
-    close();
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      errorEl.textContent = "";
+      const name = nameInput.value.trim();
+      if (!name) { errorEl.textContent = "El nombre es obligatorio."; nameInput.focus(); return; }
+
+      const id = idInput.value;
+      const duplicate = getRestaurants().find(
+        r => r.name.trim().toLowerCase() === name.toLowerCase() && r.id !== id
+      );
+      if (duplicate) { errorEl.textContent = "Ya existe un restaurante con ese nombre."; nameInput.focus(); return; }
+
+      const notes = notesInput.value.trim();
+
+      // Cerrar ANTES de emitir: garantiza que el modal cierra aunque
+      // el listener del evento lance una excepción.
+      close();
+
+      if (id) {
+        const updated = updateRestaurant(id, { name, notes });
+        if (updated) emit("restaurant:updated", updated);
+      } else {
+        emit("restaurant:created", createRestaurant({ name, notes }));
+      }
+    };
+
+    // Actualizar API global con referencias frescas al DOM actual
+    (window as any).restaurantForm = { open, close };
   });
-
-  // Expose API globally
-  (window as any).restaurantForm = { open, close };
 </script>
