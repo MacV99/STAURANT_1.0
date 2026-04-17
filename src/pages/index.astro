@@ -54,7 +54,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 <script>
   import { supabase } from "../lib/supabase.ts";
   import {
-    initCache,
+    initCache, isCacheLoaded,
     getRestaurants,
     deleteRestaurant,
     getDishesByRestaurant,
@@ -98,6 +98,74 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     return (new URLSearchParams(window.location.search).get("tab") as "visitados" | "pendientes") ?? "visitados";
   }
 
+  // ─── Generadores HTML (nivel módulo) ─────────────────────────────────────────
+
+  function updateSortUI() {
+    document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach(btn => {
+      const isActive = btn.dataset.field === sortState.field;
+      btn.classList.toggle("active", isActive);
+      btn.querySelector("i")!.className = isActive
+        ? `bi bi-arrow-${sortState.dir === "asc" ? "up" : "down"}`
+        : "bi bi-arrow-down-up";
+    });
+  }
+
+  function buildListHTML(status: "visited" | "pending"): string {
+    const all    = getRestaurants().filter(r => r.status === status);
+    const sorted = sortRestaurants(all);
+    if (sorted.length === 0) return `
+      <div class="empty-state">
+        <i class="bi bi-${status === "visited" ? "journal-check" : "bookmark"}"></i>
+        <p>${status === "visited" ? "Aún no has registrado restaurantes visitados." : "No tienes restaurantes pendientes."}</p>
+        ${status === "visited" ? '<p class="empty-hint">Agrega uno con el botón <strong>+</strong></p>' : ""}
+      </div>`;
+    return `<div class="cards-grid">${
+      sorted.map(r => renderRestaurantCard(r, getRestaurantAverage(r.id), getDishesByRestaurant(r.id).length)).join("")
+    }</div>`;
+  }
+
+  // ─── PRE-RENDER en astro:after-swap ─────────────────────────────────────────
+  // Dispara ANTES de la animación de ViewTransitions → el usuario ve datos
+  // animándose, no una página vacía que luego se llena.
+
+  document.addEventListener("astro:after-swap", () => {
+    const tabVisitadosEl  = document.getElementById("tab-visitados")  as HTMLElement | null;
+    const tabPendientesEl = document.getElementById("tab-pendientes") as HTMLElement | null;
+    if (!tabVisitadosEl || !isCacheLoaded()) return;
+
+    const activeTab = getActiveTab();
+
+    tabVisitadosEl.innerHTML  = buildListHTML("visited");
+    if (tabPendientesEl) tabPendientesEl.innerHTML = buildListHTML("pending");
+
+    tabVisitadosEl.hidden  = activeTab !== "visitados";
+    if (tabPendientesEl) tabPendientesEl.hidden = activeTab !== "pendientes";
+
+    // Sort bar visibility
+    const sortBarEl = document.querySelector<HTMLElement>(".sort-bar");
+    if (sortBarEl) {
+      const status = activeTab === "visitados" ? "visited" : "pending";
+      sortBarEl.hidden = getRestaurants().filter(r => r.status === status).length < 2;
+    }
+
+    // Contadores de tabs
+    const all = getRestaurants();
+    const cv = document.getElementById("count-visitados");
+    const cp = document.getElementById("count-pendientes");
+    if (cv) cv.textContent = String(all.filter(r => r.status === "visited").length);
+    if (cp) cp.textContent = String(all.filter(r => r.status === "pending").length);
+
+    // Estado activo de tab buttons
+    document.querySelectorAll<HTMLButtonElement>(".tab-btn").forEach(btn => {
+      const active = btn.dataset.tab === activeTab;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-selected", String(active));
+    });
+
+    updateSortUI();
+    // Sin event wiring — astro:page-load lo añade tras la animación
+  });
+
   // ─── AbortController para limpiar eventos al navegar ───────────────────────
 
   let pageAbort: AbortController | null = null;
@@ -125,18 +193,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     pageAbort = new AbortController();
     const { signal } = pageAbort;
 
-    // ─── Sort UI ──────────────────────────────────────────────────────────────
-
-    function updateSortUI() {
-      document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
-        const isActive = btn.dataset.field === sortState.field;
-        btn.classList.toggle("active", isActive);
-        const icon = btn.querySelector("i")!;
-        icon.className = isActive
-          ? `bi bi-arrow-${sortState.dir === "asc" ? "up" : "down"}`
-          : "bi bi-arrow-down-up";
-      });
-    }
+    // ─── Sort bar visibility ──────────────────────────────────────────────────
 
     function updateSortBarVisibility() {
       const status = getActiveTab() === "visitados" ? "visited" : "pending";
@@ -171,22 +228,9 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     }
 
     function renderList(status: "visited" | "pending", container: HTMLElement) {
-      const all    = getRestaurants().filter((r) => r.status === status);
-      const sorted = sortRestaurants(all);
-      if (sorted.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <i class="bi bi-${status === "visited" ? "journal-check" : "bookmark"}"></i>
-            <p>${status === "visited" ? "Aún no has registrado restaurantes visitados." : "No tienes restaurantes pendientes."}</p>
-            ${status === "visited" ? '<p class="empty-hint">Agrega uno con el botón <strong>+</strong></p>' : ""}
-          </div>`;
-        return;
-      }
-      const cards = sorted.map((r) =>
-        renderRestaurantCard(r, getRestaurantAverage(r.id), getDishesByRestaurant(r.id).length)
-      );
-      container.innerHTML = `<div class="cards-grid">${cards.join("")}</div>`;
-      wireCardActions(container, sorted);
+      container.innerHTML = buildListHTML(status);
+      const sorted = sortRestaurants(getRestaurants().filter(r => r.status === status));
+      if (sorted.length > 0) wireCardActions(container, sorted);
     }
 
     function updateCounts() {

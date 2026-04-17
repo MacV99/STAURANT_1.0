@@ -77,6 +77,12 @@ export function clearCache(): void {
   _userId = null;
 }
 
+/** true si initCache() ya fue llamado en esta sesión de módulo.
+ *  Útil en astro:after-swap para saber si podemos leer datos del caché. */
+export function isCacheLoaded(): boolean {
+  return _userId !== null;
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 export function escapeHtml(str: string): string {

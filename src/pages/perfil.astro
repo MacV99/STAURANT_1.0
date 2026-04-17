@@ -202,6 +202,27 @@ import Layout1 from "../layouts/Layout1.astro";
   import { supabase } from "../lib/supabase.ts";
   import { clearCache, initCache } from "../lib/data.ts";
 
+  const PROFILE_CACHE_KEY = "staurant_profile_v1";
+
+  // ─── PRE-RENDER en astro:after-swap ────────────────────────────────────────
+  // Si hay un perfil cacheado en localStorage, lo muestra inmediatamente
+  // antes de que empiece la animación, para que el usuario vea los datos
+  // animándose en vez de un perfil vacío.
+
+  document.addEventListener("astro:after-swap", () => {
+    const emailEl = document.getElementById("profile-email");
+    if (!emailEl) return;
+    try {
+      const cached = JSON.parse(localStorage.getItem(PROFILE_CACHE_KEY) ?? "null");
+      if (!cached) return;
+      emailEl.textContent = cached.email || "—";
+      const nameInput = document.getElementById("profile-name") as HTMLInputElement | null;
+      const avatarEl  = document.getElementById("profile-avatar");
+      if (nameInput && cached.name) nameInput.value = cached.name;
+      if (avatarEl  && cached.name) avatarEl.textContent = cached.name.charAt(0).toUpperCase();
+    } catch { /* ignore */ }
+  });
+
   // Usar astro:page-load garantiza que este código corre en cada navegación
   // (tanto carga directa como navegación via ViewTransitions), evitando el
   // bug donde el módulo ES cacheado no re-ejecuta el código top-level.
@@ -239,6 +260,12 @@ import Layout1 from "../layouts/Layout1.astro";
       avatarEl.textContent = profile.name.charAt(0).toUpperCase();
     }
 
+    // Guardar en caché local para pre-render instantáneo en la próxima visita
+    localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({
+      email: user.email ?? "",
+      name: profile?.name ?? "",
+    }));
+
     // ─── Guardar nombre ─────────────────────────────────────────────────────
     // Usamos .onsubmit (asignación de propiedad) en vez de addEventListener
     // para evitar acumulación de listeners si el módulo se re-carga.
@@ -263,7 +290,11 @@ import Layout1 from "../layouts/Layout1.astro";
         msgEl.classList.add("error");
       } else {
         msgEl.textContent = "¡Guardado correctamente!";
-        if (name) avatarEl.textContent = name.charAt(0).toUpperCase();
+        if (name) {
+          avatarEl.textContent = name.charAt(0).toUpperCase();
+          // Actualizar caché local para que el pre-render refleje el nombre nuevo
+          localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({ email: user.email ?? "", name }));
+        }
       }
 
       btn.disabled = false;
