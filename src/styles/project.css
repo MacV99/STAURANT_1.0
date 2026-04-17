@@ -76,7 +76,6 @@
 .cards-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 14px;
   width: 100%;
 }
 
@@ -110,7 +109,6 @@
 .card-body {
   display: flex;
   flex-direction: column;
-  gap: 4px;
   min-width: 0;
 }
 
@@ -277,7 +275,7 @@
 .rh-meta {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 3px;
   flex: 1;
   min-width: 0;
 }
@@ -486,7 +484,7 @@
 @media (min-width: 768px) {
   .cards-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+    gap: 7px;
   }
 
   .restaurant-card {
