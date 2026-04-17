@@ -127,27 +127,9 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     escapeHtml,
   } from "../lib/data.ts";
   import type { Restaurant } from "../lib/data.ts";
-  import { renderDishCard, getRatingBadgeHTML, on, emit } from "../scripts/store.ts";
+  import { renderDishCard, getRatingBadgeHTML, emit } from "../scripts/store.ts";
 
-  // ─── Auth + cache ───────────────────────────────────────────────────────────
-
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) { window.location.href = "/login"; throw new Error("No auth"); }
-  await initCache(session.user.id);
-
-  // ─── Guard restaurante ─────────────────────────────────────────────────────
-
-  const params = new URLSearchParams(window.location.search);
-  const id = params.get("id") ?? "";
-  let restaurant = getRestaurants().find((r) => r.id === id) as Restaurant | undefined;
-
-  const backTab = restaurant?.status === "pending" ? "pendientes" : "visitados";
-  const backLink = document.getElementById("back-link") as HTMLAnchorElement;
-  if (backLink) backLink.href = `/?tab=${backTab}`;
-
-  if (!restaurant) { window.location.href = "/"; throw new Error("No encontrado"); }
-
-  // ─── Sort de platos ─────────────────────────────────────────────────────────
+  // ─── Sort state de platos (persiste en memoria de módulo) ──────────────────
 
   type SortField = "name" | "rating" | "date";
   type SortDir   = "asc" | "desc";
@@ -166,155 +148,181 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
   function sortDishes(dishes: ReturnType<typeof getDishesByRestaurant>) {
     return [...dishes].sort((a, b) => {
       let cmp = 0;
-      if (dishSort.field === "name")   cmp = a.name.localeCompare(b.name);
+      if (dishSort.field === "name")        cmp = a.name.localeCompare(b.name);
       else if (dishSort.field === "rating") cmp = a.rating - b.rating;
       else cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       return dishSort.dir === "asc" ? cmp : -cmp;
     });
   }
 
-  function updateDishSortUI() {
-    document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
-      const isActive = btn.dataset.field === dishSort.field;
-      btn.classList.toggle("active", isActive);
-      const icon = btn.querySelector("i")!;
-      icon.className = isActive
-        ? `bi bi-arrow-${dishSort.dir === "asc" ? "up" : "down"}`
-        : "bi bi-arrow-down-up";
-    });
-  }
+  // ─── AbortController para limpiar eventos al navegar ───────────────────────
 
-  document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const field = btn.dataset.field as SortField;
-      if (dishSort.field === field) {
-        dishSort.dir = dishSort.dir === "asc" ? "desc" : "asc";
-      } else {
-        dishSort.field = field;
-        dishSort.dir = field === "rating" ? "desc" : "asc";
-      }
-      setSortState(dishSort);
-      updateDishSortUI();
-      renderDishes();
-    });
-  });
+  let pageAbort: AbortController | null = null;
+  document.addEventListener("astro:before-swap", () => pageAbort?.abort());
 
-  // ─── Render header ─────────────────────────────────────────────────────────
+  // ─── Init por cada navegación (ViewTransitions + carga directa) ─────────────
 
-  const headerEl    = document.getElementById("restaurant-header")!;
-  const dishesListEl = document.getElementById("dishes-list")!;
-  const sortBarEl   = document.querySelector<HTMLElement>(".sort-bar")!;
+  document.addEventListener("astro:page-load", async () => {
+    const headerEl = document.getElementById("restaurant-header");
+    if (!headerEl) return; // no estamos en la página de restaurante
 
-  function renderHeader() {
-    const avg      = getRestaurantAverage(restaurant!.id);
-    const dishes   = getDishesByRestaurant(restaurant!.id);
-    const isPending = restaurant!.status === "pending";
-    headerEl.innerHTML = `
-      <div class="rh-card">
-        <div class="rh-top">
-          ${getRatingBadgeHTML(avg)}
-          <div class="rh-meta">
-            <h1 class="rh-name">${escapeHtml(restaurant!.name)}</h1>
-            <div class="rh-pills">
-              ${isPending
-                ? `<span class="pending-tag"><i class="bi bi-bookmark"></i> Pendiente</span>`
-                : `<span class="dish-count-pill"><i class="bi bi-journal-text"></i> ${dishes.length} ${dishes.length === 1 ? "plato" : "platos"}</span>`
-              }
+    // Auth
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { window.location.href = "/login"; return; }
+    await initCache(session.user.id);
+
+    // Resolver restaurante desde URL (re-leído en cada navegación)
+    const id = new URLSearchParams(window.location.search).get("id") ?? "";
+    let restaurant = getRestaurants().find((r) => r.id === id) as Restaurant | undefined;
+
+    const backLink = document.getElementById("back-link") as HTMLAnchorElement;
+    if (backLink) backLink.href = `/?tab=${restaurant?.status === "pending" ? "pendientes" : "visitados"}`;
+
+    if (!restaurant) { window.location.href = "/"; return; }
+
+    // DOM refs frescos
+    const dishesListEl = document.getElementById("dishes-list")!;
+    const sortBarEl    = document.querySelector<HTMLElement>(".sort-bar")!;
+
+    // Nuevo AbortController para esta visita
+    pageAbort?.abort();
+    pageAbort = new AbortController();
+    const { signal } = pageAbort;
+
+    // ─── Sort UI ──────────────────────────────────────────────────────────────
+
+    function updateDishSortUI() {
+      document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
+        const isActive = btn.dataset.field === dishSort.field;
+        btn.classList.toggle("active", isActive);
+        const icon = btn.querySelector("i")!;
+        icon.className = isActive
+          ? `bi bi-arrow-${dishSort.dir === "asc" ? "up" : "down"}`
+          : "bi bi-arrow-down-up";
+      });
+    }
+
+    // ─── Render header ────────────────────────────────────────────────────────
+
+    function renderHeader() {
+      const avg       = getRestaurantAverage(restaurant!.id);
+      const dishes    = getDishesByRestaurant(restaurant!.id);
+      const isPending = restaurant!.status === "pending";
+      headerEl.innerHTML = `
+        <div class="rh-card">
+          <div class="rh-top">
+            ${getRatingBadgeHTML(avg)}
+            <div class="rh-meta">
+              <h1 class="rh-name">${escapeHtml(restaurant!.name)}</h1>
+              <div class="rh-pills">
+                ${isPending
+                  ? `<span class="pending-tag"><i class="bi bi-bookmark"></i> Pendiente</span>`
+                  : `<span class="dish-count-pill"><i class="bi bi-journal-text"></i> ${dishes.length} ${dishes.length === 1 ? "plato" : "platos"}</span>`
+                }
+              </div>
+            </div>
+            <div class="rh-actions">
+              <button class="btn-edit-rh boton2" data-id="${restaurant!.id}" aria-label="Editar restaurante">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn-delete-rh boton2" data-id="${restaurant!.id}" aria-label="Eliminar restaurante">
+                <i class="bi bi-trash"></i>
+              </button>
             </div>
           </div>
-          <div class="rh-actions">
-            <button class="btn-edit-rh boton2" data-id="${restaurant!.id}" aria-label="Editar restaurante">
-              <i class="bi bi-pencil"></i>
-            </button>
-            <button class="btn-delete-rh boton2" data-id="${restaurant!.id}" aria-label="Eliminar restaurante">
-              <i class="bi bi-trash"></i>
-            </button>
-          </div>
-        </div>
-        ${restaurant!.notes ? `<p class="rh-notes">${escapeHtml(restaurant!.notes)}</p>` : ""}
-      </div>`;
-
-    // Cablear botones del header
-    headerEl.querySelector<HTMLButtonElement>(".btn-edit-rh")?.addEventListener("click", () => {
-      (window as any).restaurantForm.open("edit", restaurant!);
-    });
-    headerEl.querySelector<HTMLButtonElement>(".btn-delete-rh")?.addEventListener("click", () => {
-      (window as any).confirmDialog.show(
-        `¿Eliminar "${restaurant?.name}"? Se borrarán también sus platos.`,
-        () => { deleteRestaurant(restaurant!.id); window.location.href = "/"; }
-      );
-    });
-  }
-
-  // ─── Render dishes ─────────────────────────────────────────────────────────
-
-  function renderDishes() {
-    renderHeader();
-    const dishes = sortDishes(getDishesByRestaurant(restaurant!.id));
-
-    // Sort bar solo visible con 2+ platos
-    sortBarEl.hidden = dishes.length < 2;
-
-    if (dishes.length === 0) {
-      dishesListEl.innerHTML = `
-        <div class="empty-state">
-          <i class="bi bi-egg-fried"></i>
-          <p>Aún no hay platos registrados.</p>
-          <p class="empty-hint">Agrega el primer plato con el botón de arriba.</p>
+          ${restaurant!.notes ? `<p class="rh-notes">${escapeHtml(restaurant!.notes)}</p>` : ""}
         </div>`;
-      return;
-    }
 
-    dishesListEl.innerHTML = dishes.map(renderDishCard).join("");
-    wireDishActions(dishes);
-  }
-
-  // ─── Dish actions wiring ───────────────────────────────────────────────────
-
-  function wireDishActions(dishes: ReturnType<typeof getDishesByRestaurant>) {
-    dishesListEl.querySelectorAll<HTMLButtonElement>(".btn-edit-dish").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const dish = dishes.find((d) => d.id === btn.dataset.id);
-        if (dish) (window as any).dishForm.open("edit", restaurant!.id, dish);
+      headerEl.querySelector<HTMLButtonElement>(".btn-edit-rh")?.addEventListener("click", () => {
+        (window as any).restaurantForm.open("edit", restaurant!);
       });
-    });
-
-    dishesListEl.querySelectorAll<HTMLButtonElement>(".btn-delete-dish").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const dish = dishes.find((d) => d.id === btn.dataset.id);
+      headerEl.querySelector<HTMLButtonElement>(".btn-delete-rh")?.addEventListener("click", () => {
         (window as any).confirmDialog.show(
-          `¿Eliminar el plato "${dish?.name}"?`,
-          () => { deleteDish(btn.dataset.id!); emit("dish:deleted", btn.dataset.id); }
+          `¿Eliminar "${restaurant?.name}"? Se borrarán también sus platos.`,
+          () => { deleteRestaurant(restaurant!.id); window.location.href = "/"; }
         );
       });
-    });
-  }
-
-  // ─── Add dish button ───────────────────────────────────────────────────────
-
-  document.getElementById("btn-add-dish")!.addEventListener("click", () => {
-    (window as any).dishForm.open("create", restaurant!.id);
-  });
-
-  // ─── Eventos ───────────────────────────────────────────────────────────────
-
-  on("dish:created", () => {
-    if (restaurant!.status === "pending") {
-      const updated = markAsVisited(restaurant!.id);
-      if (updated) { restaurant = updated; emit("restaurant:visited", updated); }
     }
+
+    // ─── Dish actions ─────────────────────────────────────────────────────────
+
+    function wireDishActions(dishes: ReturnType<typeof getDishesByRestaurant>) {
+      dishesListEl.querySelectorAll<HTMLButtonElement>(".btn-edit-dish").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const dish = dishes.find((d) => d.id === btn.dataset.id);
+          if (dish) (window as any).dishForm.open("edit", restaurant!.id, dish);
+        });
+      });
+      dishesListEl.querySelectorAll<HTMLButtonElement>(".btn-delete-dish").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const dish = dishes.find((d) => d.id === btn.dataset.id);
+          (window as any).confirmDialog.show(
+            `¿Eliminar el plato "${dish?.name}"?`,
+            () => { deleteDish(btn.dataset.id!); emit("dish:deleted", btn.dataset.id); }
+          );
+        });
+      });
+    }
+
+    // ─── Render dishes ────────────────────────────────────────────────────────
+
+    function renderDishes() {
+      renderHeader();
+      const dishes = sortDishes(getDishesByRestaurant(restaurant!.id));
+      sortBarEl.hidden = dishes.length < 2;
+      if (dishes.length === 0) {
+        dishesListEl.innerHTML = `
+          <div class="empty-state">
+            <i class="bi bi-egg-fried"></i>
+            <p>Aún no hay platos registrados.</p>
+            <p class="empty-hint">Agrega el primer plato con el botón de arriba.</p>
+          </div>`;
+        return;
+      }
+      dishesListEl.innerHTML = dishes.map(renderDishCard).join("");
+      wireDishActions(dishes);
+    }
+
+    // ─── Cablear controles ────────────────────────────────────────────────────
+
+    document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
+      btn.onclick = () => {
+        const field = btn.dataset.field as SortField;
+        if (dishSort.field === field) {
+          dishSort.dir = dishSort.dir === "asc" ? "desc" : "asc";
+        } else {
+          dishSort.field = field;
+          dishSort.dir = field === "rating" ? "desc" : "asc";
+        }
+        setSortState(dishSort);
+        updateDishSortUI();
+        renderDishes();
+      };
+    });
+
+    const addDishBtn = document.getElementById("btn-add-dish")!;
+    addDishBtn.onclick = () => (window as any).dishForm.open("create", restaurant!.id);
+
+    // ─── Eventos del store (signal los cancela al navegar) ────────────────────
+
+    document.addEventListener("dish:created", () => {
+      if (restaurant!.status === "pending") {
+        const updated = markAsVisited(restaurant!.id);
+        if (updated) { restaurant = updated; emit("restaurant:visited", updated); }
+      }
+      renderDishes();
+    }, { signal });
+    document.addEventListener("dish:updated",  () => renderDishes(), { signal });
+    document.addEventListener("dish:deleted",  () => renderDishes(), { signal });
+    document.addEventListener("restaurant:updated", (e) => {
+      const updated = (e as CustomEvent).detail as Restaurant;
+      if (updated?.id === restaurant!.id) { restaurant = updated; }
+      renderDishes();
+    }, { signal });
+
+    // ─── Render inicial ───────────────────────────────────────────────────────
+
+    updateDishSortUI();
     renderDishes();
   });
-  on("dish:updated", () => renderDishes());
-  on("dish:deleted", () => renderDishes());
-  on("restaurant:updated", (e) => {
-    const updated = (e as CustomEvent).detail as Restaurant;
-    if (updated?.id === restaurant!.id) { restaurant = updated; }
-    renderDishes();
-  });
-
-  // ─── Init ──────────────────────────────────────────────────────────────────
-
-  updateDishSortUI();
-  renderDishes();
 </script>

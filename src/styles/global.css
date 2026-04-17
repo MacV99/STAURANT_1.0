@@ -232,6 +232,24 @@ input[type="file"] {
 
 }
 
+/* === VIEW TRANSITIONS (animación suave entre páginas) === */
+
+@keyframes vt-slide-in {
+  from { opacity: 0; transform: translateY(7px); }
+}
+
+@keyframes vt-fade-out {
+  to { opacity: 0; }
+}
+
+::view-transition-old(root) {
+  animation: 90ms ease-out both vt-fade-out;
+}
+
+::view-transition-new(root) {
+  animation: 200ms ease-out both vt-slide-in;
+}
+
 /* === RESPONSIVE === */
 @media (min-width: 768px) {
 

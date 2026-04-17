@@ -18,13 +18,13 @@ export default defineConfig({
         orientation: 'portrait-primary',
         icons: [
           {
-            src: '/img/logo2.png',
+            src: '/img/icon.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any',
           },
           {
-            src: '/img/logo2.png',
+            src: '/img/icon.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
