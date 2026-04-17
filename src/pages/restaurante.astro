@@ -129,7 +129,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) { window.location.href = "/login"; throw new Error("No auth"); }
-  await initCache();
+  await initCache(session.user.id);
 
   // ─── Guard restaurante ─────────────────────────────────────────────────────
 

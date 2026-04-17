@@ -206,7 +206,7 @@ import Layout1 from "../layouts/Layout1.astro";
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) { window.location.href = "/login"; throw new Error("No auth"); }
-  await initCache();
+  await initCache(session.user.id);
 
   // ─── Cargar datos de perfil ─────────────────────────────────────────────────
 

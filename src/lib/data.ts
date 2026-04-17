@@ -49,13 +49,11 @@ function getCache(): AppCache {
   return c;
 }
 
-/** Llama esto al inicio de cada página protegida.
- *  - Si hay caché válido → no hace petición a Supabase.
+/** Llama esto al inicio de cada página protegida, pasando el userId de la sesión.
+ *  - Si hay caché válido → no hace petición a Supabase (instantáneo).
  *  - Primera vez → carga desde Supabase y guarda en caché. */
-export async function initCache(): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  _userId = user.id;
+export async function initCache(userId: string): Promise<void> {
+  _userId = userId;
 
   const cached = readCache();
   if (cached?.userId === _userId) return; // cache válido, nada que hacer
