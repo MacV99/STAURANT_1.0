@@ -202,75 +202,81 @@ import Layout1 from "../layouts/Layout1.astro";
   import { supabase } from "../lib/supabase.ts";
   import { clearCache, initCache } from "../lib/data.ts";
 
-  // ─── Auth guard ─────────────────────────────────────────────────────────────
+  // Usar astro:page-load garantiza que este código corre en cada navegación
+  // (tanto carga directa como navegación via ViewTransitions), evitando el
+  // bug donde el módulo ES cacheado no re-ejecuta el código top-level.
+  document.addEventListener("astro:page-load", async () => {
+    // Guard: solo correr si estamos en la página de perfil
+    const emailEl = document.getElementById("profile-email");
+    if (!emailEl) return;
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) { window.location.href = "/login"; throw new Error("No auth"); }
-  await initCache(session.user.id);
+    // ─── Auth guard ─────────────────────────────────────────────────────────
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { window.location.href = "/login"; return; }
+    await initCache(session.user.id);
 
-  // ─── Back link contextual ───────────────────────────────────────────────────
+    // ─── Back link contextual ───────────────────────────────────────────────
+    const fromTab = new URLSearchParams(window.location.search).get("from") ?? "visitados";
+    const backLinkEl = document.querySelector(".back-link") as HTMLAnchorElement;
+    if (backLinkEl) backLinkEl.href = `/?tab=${fromTab}`;
 
-  const fromTab = new URLSearchParams(window.location.search).get("from") ?? "visitados";
-  const backLinkEl = document.querySelector(".back-link") as HTMLAnchorElement;
-  if (backLinkEl) backLinkEl.href = `/?tab=${fromTab}`;
+    // ─── Cargar datos de perfil ─────────────────────────────────────────────
+    const user = session.user;
+    const nameInput = document.getElementById("profile-name") as HTMLInputElement;
+    const msgEl = document.getElementById("profile-msg")!;
+    const avatarEl = document.getElementById("profile-avatar")!;
 
-  // ─── Cargar datos de perfil ─────────────────────────────────────────────────
+    emailEl.textContent = user.email ?? "";
 
-  const user = session.user;
-  const emailEl = document.getElementById("profile-email")!;
-  const nameInput = document.getElementById("profile-name") as HTMLInputElement;
-  const msgEl = document.getElementById("profile-msg")!;
-  const avatarEl = document.getElementById("profile-avatar")!;
-
-  emailEl.textContent = user.email ?? "";
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("name")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.name) {
-    nameInput.value = profile.name;
-    avatarEl.textContent = profile.name.charAt(0).toUpperCase();
-  }
-
-  // ─── Guardar nombre ─────────────────────────────────────────────────────────
-
-  const form = document.getElementById("profile-form") as HTMLFormElement;
-
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    msgEl.textContent = "";
-    msgEl.classList.remove("error");
-
-    const name = nameInput.value.trim();
-    const btn = form.querySelector<HTMLButtonElement>("button[type='submit']")!;
-    btn.disabled = true;
-    btn.textContent = "Guardando...";
-
-    const { error } = await supabase
+    const { data: profile } = await supabase
       .from("profiles")
-      .update({ name })
-      .eq("id", user.id);
+      .select("name")
+      .eq("id", user.id)
+      .single();
 
-    if (error) {
-      msgEl.textContent = "Error al guardar. Intenta de nuevo.";
-      msgEl.classList.add("error");
-    } else {
-      msgEl.textContent = "¡Guardado correctamente!";
-      if (name) avatarEl.textContent = name.charAt(0).toUpperCase();
+    if (profile?.name) {
+      nameInput.value = profile.name;
+      avatarEl.textContent = profile.name.charAt(0).toUpperCase();
     }
 
-    btn.disabled = false;
-    btn.textContent = "Guardar cambios";
-  });
+    // ─── Guardar nombre ─────────────────────────────────────────────────────
+    // Usamos .onsubmit (asignación de propiedad) en vez de addEventListener
+    // para evitar acumulación de listeners si el módulo se re-carga.
+    const form = document.getElementById("profile-form") as HTMLFormElement;
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      msgEl.textContent = "";
+      msgEl.classList.remove("error");
 
-  // ─── Cerrar sesión ──────────────────────────────────────────────────────────
+      const name = nameInput.value.trim();
+      const btn = form.querySelector<HTMLButtonElement>("button[type='submit']")!;
+      btn.disabled = true;
+      btn.textContent = "Guardando...";
 
-  document.getElementById("btn-logout")!.addEventListener("click", async () => {
-    clearCache();
-    await supabase.auth.signOut();
-    window.location.href = "/login";
+      const { error } = await supabase
+        .from("profiles")
+        .update({ name })
+        .eq("id", user.id);
+
+      if (error) {
+        msgEl.textContent = "Error al guardar. Intenta de nuevo.";
+        msgEl.classList.add("error");
+      } else {
+        msgEl.textContent = "¡Guardado correctamente!";
+        if (name) avatarEl.textContent = name.charAt(0).toUpperCase();
+      }
+
+      btn.disabled = false;
+      btn.textContent = "Guardar cambios";
+    };
+
+    // ─── Cerrar sesión ──────────────────────────────────────────────────────
+    // Igual: .onclick para evitar duplicados
+    const logoutBtn = document.getElementById("btn-logout")!;
+    logoutBtn.onclick = async () => {
+      clearCache();
+      await supabase.auth.signOut();
+      window.location.href = "/login";
+    };
   });
 </script>
