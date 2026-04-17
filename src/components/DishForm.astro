@@ -210,101 +210,95 @@
   import { createDish, updateDish, getDishesByRestaurant } from "../lib/data.ts";
   import { emit } from "../scripts/store.ts";
 
-  const overlay = document.getElementById("dish-form-overlay")!;
-  const form = document.getElementById("dish-form") as HTMLFormElement;
-  const titleEl = document.getElementById("dish-form-title")!;
-  const idInput = document.getElementById("df-id") as HTMLInputElement;
-  const restaurantIdInput = document.getElementById(
-    "df-restaurant-id",
-  ) as HTMLInputElement;
-  const nameInput = document.getElementById("df-name") as HTMLInputElement;
-  const ratingInput = document.getElementById("df-rating") as HTMLInputElement;
-  const ratingValue = document.getElementById("df-rating-value")!;
-  const notesInput = document.getElementById("df-notes") as HTMLTextAreaElement;
-  const errorEl = document.getElementById("df-error")!;
-  const closeBtn = document.getElementById("dish-form-close")!;
-  const cancelBtn = document.getElementById("dish-form-cancel")!;
+  // Re-inicializar en cada navegación para que open/close siempre
+  // operen sobre los elementos del DOM ACTUAL (no los del swap anterior).
+  document.addEventListener("astro:page-load", () => {
+    const overlay = document.getElementById("dish-form-overlay");
+    if (!overlay) return; // no está en esta página
 
-  ratingInput.addEventListener("input", () => {
-    ratingValue.textContent = ratingInput.value;
-  });
+    const form              = document.getElementById("dish-form") as HTMLFormElement;
+    const titleEl           = document.getElementById("dish-form-title")!;
+    const idInput           = document.getElementById("df-id") as HTMLInputElement;
+    const restaurantIdInput = document.getElementById("df-restaurant-id") as HTMLInputElement;
+    const nameInput         = document.getElementById("df-name") as HTMLInputElement;
+    const ratingInput       = document.getElementById("df-rating") as HTMLInputElement;
+    const ratingValue       = document.getElementById("df-rating-value")!;
+    const notesInput        = document.getElementById("df-notes") as HTMLTextAreaElement;
+    const errorEl           = document.getElementById("df-error")!;
+    const closeBtn          = document.getElementById("dish-form-close")!;
+    const cancelBtn         = document.getElementById("dish-form-cancel")!;
 
-  nameInput.addEventListener("input", () => {
-    const pos = nameInput.selectionStart;
-    nameInput.value = nameInput.value.toUpperCase();
-    nameInput.setSelectionRange(pos, pos);
-  });
+    function open(mode: "create" | "edit", restaurantId: string, data?: Dish) {
+      errorEl.textContent = "";
+      form.reset();
+      ratingInput.value = "7";
+      ratingValue.textContent = "7";
+      restaurantIdInput.value = restaurantId;
 
-  function open(mode: "create" | "edit", restaurantId: string, data?: Dish) {
-    errorEl.textContent = "";
-    form.reset();
-    ratingInput.value = "7";
-    ratingValue.textContent = "7";
-    restaurantIdInput.value = restaurantId;
+      if (mode === "edit" && data) {
+        titleEl.textContent = "Editar plato";
+        idInput.value = data.id;
+        nameInput.value = data.name;
+        ratingInput.value = String(data.rating);
+        ratingValue.textContent = String(data.rating);
+        notesInput.value = data.notes;
+      } else {
+        titleEl.textContent = "Nuevo plato";
+        idInput.value = "";
+      }
 
-    if (mode === "edit" && data) {
-      titleEl.textContent = "Editar plato";
-      idInput.value = data.id;
-      nameInput.value = data.name;
-      ratingInput.value = String(data.rating);
-      ratingValue.textContent = String(data.rating);
-      notesInput.value = data.notes;
-    } else {
-      titleEl.textContent = "Nuevo plato";
-      idInput.value = "";
-    }
-
-    overlay.classList.add("is-open");
-    nameInput.focus();
-  }
-
-  function close() {
-    overlay.classList.remove("is-open");
-  }
-
-  closeBtn.addEventListener("click", close);
-  cancelBtn.addEventListener("click", close);
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) close();
-  });
-
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    errorEl.textContent = "";
-
-    const name = nameInput.value.trim();
-    if (!name) {
-      errorEl.textContent = "El nombre del plato es obligatorio.";
+      overlay.classList.add("is-open");
       nameInput.focus();
-      return;
     }
 
-    const restaurantId = restaurantIdInput.value;
-    const id = idInput.value;
-
-    const duplicate = getDishesByRestaurant(restaurantId).find(
-      (d) => d.name.trim().toLowerCase() === name.toLowerCase() && d.id !== id
-    );
-    if (duplicate) {
-      errorEl.textContent = "Ya existe un plato con ese nombre en este restaurante.";
-      nameInput.focus();
-      return;
+    function close() {
+      overlay.classList.remove("is-open");
     }
 
-    const rating = parseFloat(ratingInput.value);
-    const notes = notesInput.value.trim();
+    // .onclick evita acumulación de listeners si el módulo re-ejecuta
+    closeBtn.onclick  = close;
+    cancelBtn.onclick = close;
+    overlay.onclick   = (e) => { if (e.target === overlay) close(); };
 
-    if (id) {
-      const updated = updateDish(id, { name, rating, notes });
-      if (updated) emit("dish:updated", updated);
-    } else {
-      const created = createDish({ restaurantId, name, rating, notes });
-      emit("dish:created", created);
-    }
+    ratingInput.oninput = () => {
+      ratingValue.textContent = ratingInput.value;
+    };
 
-    close();
+    nameInput.oninput = () => {
+      const pos = nameInput.selectionStart;
+      nameInput.value = nameInput.value.toUpperCase();
+      nameInput.setSelectionRange(pos, pos);
+    };
+
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      errorEl.textContent = "";
+
+      const name = nameInput.value.trim();
+      if (!name) { errorEl.textContent = "El nombre del plato es obligatorio."; nameInput.focus(); return; }
+
+      const restaurantId = restaurantIdInput.value;
+      const id = idInput.value;
+
+      const duplicate = getDishesByRestaurant(restaurantId).find(
+        (d) => d.name.trim().toLowerCase() === name.toLowerCase() && d.id !== id
+      );
+      if (duplicate) { errorEl.textContent = "Ya existe un plato con ese nombre en este restaurante."; nameInput.focus(); return; }
+
+      const rating = parseFloat(ratingInput.value);
+      const notes = notesInput.value.trim();
+
+      if (id) {
+        const updated = updateDish(id, { name, rating, notes });
+        if (updated) emit("dish:updated", updated);
+      } else {
+        emit("dish:created", createDish({ restaurantId, name, rating, notes }));
+      }
+
+      close();
+    };
+
+    // Actualizar API global con referencias frescas al DOM actual
+    (window as any).dishForm = { open, close };
   });
-
-  // Expose API globally
-  (window as any).dishForm = { open, close };
 </script>

@@ -15,15 +15,44 @@ import Navbar from "../components/navbar.astro";
 <script>
   import { supabase } from "../lib/supabase.ts";
 
-  const btn = document.getElementById("header-profile-btn") as HTMLAnchorElement;
-  const avatarEl = document.getElementById("header-avatar")!;
+  const PROFILE_CACHE_KEY = "staurant_profile_v1";
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) {
+  // Pre-render inmediato desde caché (antes de la animación de ViewTransitions)
+  document.addEventListener("astro:after-swap", () => {
+    const btn      = document.getElementById("header-profile-btn") as HTMLAnchorElement | null;
+    const avatarEl = document.getElementById("header-avatar");
+    if (!btn || !avatarEl) return;
+    try {
+      const cached = JSON.parse(localStorage.getItem(PROFILE_CACHE_KEY) ?? "null");
+      if (!cached) return;
+      btn.hidden = false;
+      if (cached.name) avatarEl.textContent = cached.name.charAt(0).toUpperCase();
+      const currentTab = new URLSearchParams(window.location.search).get("tab");
+      btn.href = currentTab ? `/perfil?from=${currentTab}` : "/perfil";
+    } catch { /* ignore */ }
+  });
+
+  // Re-inicializar en cada navegación para que los elementos sean del DOM actual
+  document.addEventListener("astro:page-load", async () => {
+    const btn      = document.getElementById("header-profile-btn") as HTMLAnchorElement | null;
+    const avatarEl = document.getElementById("header-avatar");
+    if (!btn || !avatarEl) return;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
     btn.hidden = false;
     // Pasar el tab activo al link de perfil para el back link contextual
     const currentTab = new URLSearchParams(window.location.search).get("tab");
-    if (currentTab) btn.href = `/perfil?from=${currentTab}`;
+    btn.href = currentTab ? `/perfil?from=${currentTab}` : "/perfil";
+
+    // Leer avatar desde caché local (evita llamada a Supabase en cada navegación)
+    try {
+      const cached = JSON.parse(localStorage.getItem(PROFILE_CACHE_KEY) ?? "null");
+      if (cached?.name) { avatarEl.textContent = cached.name.charAt(0).toUpperCase(); return; }
+    } catch { /* ignore */ }
+
+    // Primera vez o caché sin nombre: cargar desde Supabase
     const { data: profile } = await supabase
       .from("profiles")
       .select("name")
@@ -32,7 +61,7 @@ import Navbar from "../components/navbar.astro";
     if (profile?.name) {
       avatarEl.textContent = profile.name.charAt(0).toUpperCase();
     }
-  }
+  });
 </script>
 
 <style>
