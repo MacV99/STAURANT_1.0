@@ -98,7 +98,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     return (new URLSearchParams(window.location.search).get("tab") as "visitados" | "pendientes") ?? "visitados";
   }
 
-  // ─── Generadores HTML (nivel módulo) ─────────────────────────────────────────
+  // ─── Sort UI ──────────────────────────────────────────────────────────────
 
   function updateSortUI() {
     document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach(btn => {
@@ -124,9 +124,90 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     }</div>`;
   }
 
+  // ─── Funciones de render a nivel de módulo ────────────────────────────────
+  // Consultan el DOM en cada llamada → inocuas en páginas que no tienen estos
+  // elementos, y siempre operan sobre el DOM actual sin closures stale.
+
+  function wireCardActions(container: HTMLElement, restaurants: ReturnType<typeof getRestaurants>) {
+    container.querySelectorAll<HTMLElement>(".card-clickable").forEach((card) => {
+      card.addEventListener("click", (e) => {
+        if ((e.target as HTMLElement).closest("button")) return;
+        const href = card.dataset.href;
+        if (href) window.location.href = href;
+      });
+    });
+    container.querySelectorAll<HTMLButtonElement>(".btn-edit-restaurant").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const r = restaurants.find((r) => r.id === btn.dataset.id);
+        if (r) (window as any).restaurantForm.open("edit", r);
+      });
+    });
+    container.querySelectorAll<HTMLButtonElement>(".btn-delete-restaurant").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const r = restaurants.find((r) => r.id === btn.dataset.id);
+        (window as any).confirmDialog.show(
+          `¿Eliminar "${r?.name}"? Se borrarán también sus platos.`,
+          () => { deleteRestaurant(btn.dataset.id!); renderBoth(); }
+        );
+      });
+    });
+  }
+
+  function renderList(status: "visited" | "pending", container: HTMLElement) {
+    container.innerHTML = buildListHTML(status);
+    const sorted = sortRestaurants(getRestaurants().filter(r => r.status === status));
+    if (sorted.length > 0) wireCardActions(container, sorted);
+  }
+
+  function updateCounts() {
+    const all = getRestaurants();
+    const cv = document.getElementById("count-visitados");
+    const cp = document.getElementById("count-pendientes");
+    if (cv) cv.textContent = String(all.filter((r) => r.status === "visited").length);
+    if (cp) cp.textContent = String(all.filter((r) => r.status === "pending").length);
+  }
+
+  function updateSortBarVisibility() {
+    const sortBarEl = document.querySelector<HTMLElement>(".sort-bar");
+    if (!sortBarEl) return;
+    const status = getActiveTab() === "visitados" ? "visited" : "pending";
+    sortBarEl.hidden = getRestaurants().filter((r) => r.status === status).length < 2;
+  }
+
+  function renderBoth() {
+    const tv = document.getElementById("tab-visitados") as HTMLElement | null;
+    const tp = document.getElementById("tab-pendientes") as HTMLElement | null;
+    if (!tv || !tp) return;
+    renderList("visited",  tv);
+    renderList("pending",  tp);
+    updateCounts();
+    updateSortBarVisibility();
+  }
+
+  function activateTab(tab: "visitados" | "pendientes") {
+    const tv = document.getElementById("tab-visitados") as HTMLElement | null;
+    const tp = document.getElementById("tab-pendientes") as HTMLElement | null;
+    if (!tv || !tp) return;
+    tv.hidden = tab !== "visitados";
+    tp.hidden = tab !== "pendientes";
+    document.querySelectorAll<HTMLButtonElement>(".tab-btn").forEach((btn) => {
+      const active = btn.dataset.tab === tab;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-selected", String(active));
+    });
+    history.replaceState(null, "", `/?tab=${tab}`);
+    updateSortBarVisibility();
+  }
+
+  // ─── Listeners permanentes a nivel de módulo ──────────────────────────────
+  // Registrados una sola vez. renderBoth/activateTab son inocuas si no
+  // estamos en la página principal (retornan early al no encontrar los divs).
+
+  document.addEventListener("restaurant:created", () => { renderBoth(); activateTab("pendientes"); });
+  document.addEventListener("restaurant:updated", () => renderBoth());
+  document.addEventListener("restaurant:visited", () => renderBoth());
+
   // ─── PRE-RENDER en astro:after-swap ─────────────────────────────────────────
-  // Dispara ANTES de la animación de ViewTransitions → el usuario ve datos
-  // animándose, no una página vacía que luego se llena.
 
   document.addEventListener("astro:after-swap", () => {
     const tabVisitadosEl  = document.getElementById("tab-visitados")  as HTMLElement | null;
@@ -141,21 +222,18 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     tabVisitadosEl.hidden  = activeTab !== "visitados";
     if (tabPendientesEl) tabPendientesEl.hidden = activeTab !== "pendientes";
 
-    // Sort bar visibility
     const sortBarEl = document.querySelector<HTMLElement>(".sort-bar");
     if (sortBarEl) {
       const status = activeTab === "visitados" ? "visited" : "pending";
       sortBarEl.hidden = getRestaurants().filter(r => r.status === status).length < 2;
     }
 
-    // Contadores de tabs
     const all = getRestaurants();
     const cv = document.getElementById("count-visitados");
     const cp = document.getElementById("count-pendientes");
     if (cv) cv.textContent = String(all.filter(r => r.status === "visited").length);
     if (cp) cp.textContent = String(all.filter(r => r.status === "pending").length);
 
-    // Estado activo de tab buttons
     document.querySelectorAll<HTMLButtonElement>(".tab-btn").forEach(btn => {
       const active = btn.dataset.tab === activeTab;
       btn.classList.toggle("active", active);
@@ -163,13 +241,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     });
 
     updateSortUI();
-    // Sin event wiring — astro:page-load lo añade tras la animación
   });
-
-  // ─── AbortController para limpiar eventos al navegar ───────────────────────
-
-  let pageAbort: AbortController | null = null;
-  document.addEventListener("astro:before-swap", () => pageAbort?.abort());
 
   // ─── Init por cada navegación (ViewTransitions + carga directa) ─────────────
 
@@ -181,84 +253,6 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { window.location.href = "/login"; return; }
     await initCache(session.user.id);
-
-    // DOM refs frescos tras cada swap
-    const tabVisitados  = tabVisitadosEl as HTMLElement;
-    const tabPendientes = document.getElementById("tab-pendientes")!;
-    const tabBtns       = document.querySelectorAll<HTMLButtonElement>(".tab-btn");
-    const sortBarEl     = document.querySelector<HTMLElement>(".sort-bar")!;
-
-    // Nuevo AbortController para esta visita
-    pageAbort?.abort();
-    pageAbort = new AbortController();
-    const { signal } = pageAbort;
-
-    // ─── Sort bar visibility ──────────────────────────────────────────────────
-
-    function updateSortBarVisibility() {
-      const status = getActiveTab() === "visitados" ? "visited" : "pending";
-      sortBarEl.hidden = getRestaurants().filter((r) => r.status === status).length < 2;
-    }
-
-    // ─── Render ───────────────────────────────────────────────────────────────
-
-    function wireCardActions(container: HTMLElement, restaurants: ReturnType<typeof getRestaurants>) {
-      container.querySelectorAll<HTMLElement>(".card-clickable").forEach((card) => {
-        card.addEventListener("click", (e) => {
-          if ((e.target as HTMLElement).closest("button")) return;
-          const href = card.dataset.href;
-          if (href) window.location.href = href;
-        });
-      });
-      container.querySelectorAll<HTMLButtonElement>(".btn-edit-restaurant").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const r = restaurants.find((r) => r.id === btn.dataset.id);
-          if (r) (window as any).restaurantForm.open("edit", r);
-        });
-      });
-      container.querySelectorAll<HTMLButtonElement>(".btn-delete-restaurant").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const r = restaurants.find((r) => r.id === btn.dataset.id);
-          (window as any).confirmDialog.show(
-            `¿Eliminar "${r?.name}"? Se borrarán también sus platos.`,
-            () => { deleteRestaurant(btn.dataset.id!); renderBoth(); }
-          );
-        });
-      });
-    }
-
-    function renderList(status: "visited" | "pending", container: HTMLElement) {
-      container.innerHTML = buildListHTML(status);
-      const sorted = sortRestaurants(getRestaurants().filter(r => r.status === status));
-      if (sorted.length > 0) wireCardActions(container, sorted);
-    }
-
-    function updateCounts() {
-      const all = getRestaurants();
-      const cv = document.getElementById("count-visitados");
-      const cp = document.getElementById("count-pendientes");
-      if (cv) cv.textContent = String(all.filter((r) => r.status === "visited").length);
-      if (cp) cp.textContent = String(all.filter((r) => r.status === "pending").length);
-    }
-
-    function renderBoth() {
-      renderList("visited",  tabVisitados);
-      renderList("pending",  tabPendientes);
-      updateCounts();
-      updateSortBarVisibility();
-    }
-
-    function activateTab(tab: "visitados" | "pendientes") {
-      tabVisitados.hidden  = tab !== "visitados";
-      tabPendientes.hidden = tab !== "pendientes";
-      tabBtns.forEach((btn) => {
-        const active = btn.dataset.tab === tab;
-        btn.classList.toggle("active", active);
-        btn.setAttribute("aria-selected", String(active));
-      });
-      history.replaceState(null, "", `/?tab=${tab}`);
-      updateSortBarVisibility();
-    }
 
     // ─── Cablear controles (onclick evita acumulación de listeners) ───────────
 
@@ -277,18 +271,12 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
       };
     });
 
-    tabBtns.forEach((btn) => {
+    document.querySelectorAll<HTMLButtonElement>(".tab-btn").forEach((btn) => {
       btn.onclick = () => activateTab(btn.dataset.tab as "visitados" | "pendientes");
     });
 
     const fabEl = document.getElementById("btn-add-restaurant")!;
     fabEl.onclick = () => (window as any).restaurantForm.open("create");
-
-    // ─── Eventos del store (signal los cancela al navegar) ────────────────────
-
-    document.addEventListener("restaurant:created", () => { renderBoth(); activateTab("pendientes"); }, { signal });
-    document.addEventListener("restaurant:updated", () => renderBoth(), { signal });
-    document.addEventListener("restaurant:visited", () => renderBoth(), { signal });
 
     // ─── Render inicial ───────────────────────────────────────────────────────
 

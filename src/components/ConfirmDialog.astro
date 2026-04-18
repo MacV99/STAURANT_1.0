@@ -63,18 +63,20 @@
 </style>
 
 <script>
+  import ts from "typescript";
+
   // _onConfirm vive a nivel de módulo para persistir entre renders
   let _onConfirm: (() => void) | null = null;
 
   // Re-inicializar en cada navegación para que show/hide siempre
   // operen sobre los elementos del DOM ACTUAL (no los del swap anterior).
   document.addEventListener("astro:page-load", () => {
-    const overlay   = document.getElementById("confirm-overlay");
+    const overlay = document.getElementById("confirm-overlay");
     if (!overlay) return; // no está en esta página
 
-    const msgEl     = document.getElementById("confirm-message")!;
+    const msgEl = document.getElementById("confirm-message")!;
     const cancelBtn = document.getElementById("confirm-cancel")!;
-    const okBtn     = document.getElementById("confirm-ok")!;
+    const okBtn = document.getElementById("confirm-ok")!;
 
     function show(message: string, onConfirm: () => void) {
       msgEl.textContent = message;
@@ -89,8 +91,13 @@
 
     // .onclick evita acumulación de listeners si el módulo re-ejecuta
     cancelBtn.onclick = hide;
-    okBtn.onclick     = () => { _onConfirm?.(); hide(); };
-    overlay.onclick   = (e) => { if (e.target === overlay) hide(); };
+    okBtn.onclick = () => {
+      _onConfirm?.();
+      hide();
+    };
+    overlay.onclick = (e) => {
+      if (e.target === overlay) hide();
+    };
 
     // Actualizar API global con referencias frescas al DOM actual
     (window as any).confirmDialog = { show, hide };

@@ -120,7 +120,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     initCache, isCacheLoaded,
     getRestaurants, getDishesByRestaurant,
     deleteDish, deleteRestaurant, getRestaurantAverage,
-    markAsVisited, escapeHtml,
+    markAsVisited, markAsPending, escapeHtml,
   } from "../lib/data.ts";
   import type { Restaurant } from "../lib/data.ts";
   import { renderDishCard, getRatingBadgeHTML, emit } from "../scripts/store.ts";
@@ -150,8 +150,12 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     });
   }
 
-  // ─── Generadores de HTML (nivel módulo, sin closures sobre DOM) ────────────
-  // Usados tanto en el pre-render (astro:after-swap) como en el render completo.
+  // ─── Restaurante activo (nivel de módulo) ──────────────────────────────────
+  // Actualizado en cada astro:page-load. Los listeners de módulo lo leen aquí.
+
+  let currentRestaurant: Restaurant | undefined;
+
+  // ─── Generadores de HTML (nivel módulo) ────────────────────────────────────
 
   function buildHeaderHTML(r: Restaurant, avg: number | null): string {
     const dishes    = getDishesByRestaurant(r.id);
@@ -192,10 +196,109 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     return sorted.map(renderDishCard).join("");
   }
 
+  // ─── Funciones de render y wiring a nivel de módulo ───────────────────────
+  // Consultan el DOM en cada llamada → inocuas en páginas sin estos elementos.
+
+  function wireHeaderEvents() {
+    const headerEl = document.getElementById("restaurant-header");
+    if (!headerEl || !currentRestaurant) return;
+    headerEl.querySelector<HTMLButtonElement>(".btn-edit-rh")?.addEventListener("click", () => {
+      (window as any).restaurantForm.open("edit", currentRestaurant!);
+    });
+    headerEl.querySelector<HTMLButtonElement>(".btn-delete-rh")?.addEventListener("click", () => {
+      (window as any).confirmDialog.show(
+        `¿Eliminar "${currentRestaurant?.name}"? Se borrarán también sus platos.`,
+        () => { deleteRestaurant(currentRestaurant!.id); window.location.href = "/"; }
+      );
+    });
+  }
+
+  function wireDishActions(dishes: ReturnType<typeof getDishesByRestaurant>) {
+    const dishesListEl = document.getElementById("dishes-list");
+    if (!dishesListEl || !currentRestaurant) return;
+    dishesListEl.querySelectorAll<HTMLButtonElement>(".btn-edit-dish").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const dish = dishes.find(d => d.id === btn.dataset.id);
+        if (dish) (window as any).dishForm.open("edit", currentRestaurant!.id, dish);
+      });
+    });
+    dishesListEl.querySelectorAll<HTMLButtonElement>(".btn-delete-dish").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const dish = dishes.find(d => d.id === btn.dataset.id);
+        (window as any).confirmDialog.show(
+          `¿Eliminar el plato "${dish?.name}"?`,
+          () => { deleteDish(btn.dataset.id!); emit("dish:deleted", btn.dataset.id); }
+        );
+      });
+    });
+  }
+
+  function rerenderRestaurantePage() {
+    const headerEl    = document.getElementById("restaurant-header");
+    const dishesListEl = document.getElementById("dishes-list");
+    const sortBarEl   = document.querySelector<HTMLElement>(".sort-bar");
+    if (!headerEl || !dishesListEl || !currentRestaurant) return;
+
+    const avg    = getRestaurantAverage(currentRestaurant.id);
+    const sorted = sortDishes(getDishesByRestaurant(currentRestaurant.id));
+
+    headerEl.innerHTML    = buildHeaderHTML(currentRestaurant, avg);
+    if (sortBarEl) sortBarEl.hidden = sorted.length < 2;
+    dishesListEl.innerHTML = buildDishesHTML(sorted);
+
+    wireHeaderEvents();
+    if (sorted.length > 0) wireDishActions(sorted);
+  }
+
+  // ─── Listeners permanentes a nivel de módulo ──────────────────────────────
+
+  document.addEventListener("dish:created", () => {
+    if (!currentRestaurant) return;
+    try {
+      if (currentRestaurant.status === "pending") {
+        const updated = markAsVisited(currentRestaurant.id);
+        if (updated) {
+          currentRestaurant = updated;
+          // Actualizar backLink para que "Volver" lleve a visitados
+          const bl = document.getElementById("back-link") as HTMLAnchorElement | null;
+          if (bl) bl.href = "/?tab=visitados";
+          emit("restaurant:visited", updated);
+        }
+      }
+    } catch (err) {
+      console.error("[dish:created] markAsVisited error:", err);
+    }
+    rerenderRestaurantePage();
+  });
+
+  document.addEventListener("dish:updated",  () => rerenderRestaurantePage());
+  document.addEventListener("dish:deleted", () => {
+    if (currentRestaurant?.status === "visited") {
+      const remaining = getDishesByRestaurant(currentRestaurant.id);
+      if (remaining.length === 0) {
+        const updated = markAsPending(currentRestaurant.id);
+        if (updated) {
+          currentRestaurant = updated;
+          const bl = document.getElementById("back-link") as HTMLAnchorElement | null;
+          if (bl) bl.href = "/?tab=pendientes";
+          emit("restaurant:updated", updated);
+        }
+      }
+    }
+    rerenderRestaurantePage();
+  });
+
+  document.addEventListener("restaurant:updated", (e) => {
+    try {
+      const updated = (e as CustomEvent).detail as Restaurant;
+      if (updated?.id === currentRestaurant?.id) currentRestaurant = updated;
+    } catch (err) {
+      console.error("[restaurant:updated] error:", err);
+    }
+    rerenderRestaurantePage();
+  });
+
   // ─── PRE-RENDER en astro:after-swap ────────────────────────────────────────
-  // Dispara ANTES de que empiece la animación de ViewTransitions.
-  // Si el módulo ya tiene el caché cargado (navegación previa), renderiza
-  // de inmediato para que el usuario vea el contenido aparecer con la animación.
 
   document.addEventListener("astro:after-swap", () => {
     const headerEl = document.getElementById("restaurant-header");
@@ -216,16 +319,9 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
     sortBarEl.hidden       = sorted.length < 2;
     dishesListEl.innerHTML = buildDishesHTML(sorted);
-    // Sin event wiring — astro:page-load lo añade tras la animación
   });
 
-  // ─── AbortController ────────────────────────────────────────────────────────
-
-  let pageAbort: AbortController | null = null;
-  document.addEventListener("astro:before-swap", () => pageAbort?.abort());
-
-  // ─── Init completo en astro:page-load (tras la animación) ──────────────────
-  // Hace auth, initCache, re-render con event wiring y suscripciones del store.
+  // ─── Init completo en astro:page-load ──────────────────────────────────────
 
   document.addEventListener("astro:page-load", async () => {
     const headerEl = document.getElementById("restaurant-header");
@@ -236,18 +332,11 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     await initCache(session.user.id);
 
     const id = new URLSearchParams(window.location.search).get("id") ?? "";
-    let restaurant = getRestaurants().find(r => r.id === id) as Restaurant | undefined;
+    currentRestaurant = getRestaurants().find(r => r.id === id);
 
     const backLink = document.getElementById("back-link") as HTMLAnchorElement;
-    if (backLink) backLink.href = `/?tab=${restaurant?.status === "pending" ? "pendientes" : "visitados"}`;
-    if (!restaurant) { window.location.href = "/"; return; }
-
-    const dishesListEl = document.getElementById("dishes-list")!;
-    const sortBarEl    = document.querySelector<HTMLElement>(".sort-bar")!;
-
-    pageAbort?.abort();
-    pageAbort = new AbortController();
-    const { signal } = pageAbort;
+    if (backLink) backLink.href = `/?tab=${currentRestaurant?.status === "pending" ? "pendientes" : "visitados"}`;
+    if (!currentRestaurant) { window.location.href = "/"; return; }
 
     // ─── Sort UI ──────────────────────────────────────────────────────────────
 
@@ -261,50 +350,6 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
       });
     }
 
-    // ─── Render completo + event wiring ──────────────────────────────────────
-
-    function wireHeaderEvents() {
-      headerEl.querySelector<HTMLButtonElement>(".btn-edit-rh")?.addEventListener("click", () => {
-        (window as any).restaurantForm.open("edit", restaurant!);
-      });
-      headerEl.querySelector<HTMLButtonElement>(".btn-delete-rh")?.addEventListener("click", () => {
-        (window as any).confirmDialog.show(
-          `¿Eliminar "${restaurant?.name}"? Se borrarán también sus platos.`,
-          () => { deleteRestaurant(restaurant!.id); window.location.href = "/"; }
-        );
-      });
-    }
-
-    function wireDishActions(dishes: ReturnType<typeof getDishesByRestaurant>) {
-      dishesListEl.querySelectorAll<HTMLButtonElement>(".btn-edit-dish").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const dish = dishes.find(d => d.id === btn.dataset.id);
-          if (dish) (window as any).dishForm.open("edit", restaurant!.id, dish);
-        });
-      });
-      dishesListEl.querySelectorAll<HTMLButtonElement>(".btn-delete-dish").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const dish = dishes.find(d => d.id === btn.dataset.id);
-          (window as any).confirmDialog.show(
-            `¿Eliminar el plato "${dish?.name}"?`,
-            () => { deleteDish(btn.dataset.id!); emit("dish:deleted", btn.dataset.id); }
-          );
-        });
-      });
-    }
-
-    function renderDishes() {
-      const avg    = getRestaurantAverage(restaurant!.id);
-      const sorted = sortDishes(getDishesByRestaurant(restaurant!.id));
-
-      headerEl.innerHTML     = buildHeaderHTML(restaurant!, avg);
-      sortBarEl.hidden       = sorted.length < 2;
-      dishesListEl.innerHTML = buildDishesHTML(sorted);
-
-      wireHeaderEvents();
-      if (sorted.length > 0) wireDishActions(sorted);
-    }
-
     // ─── Cablear controles ────────────────────────────────────────────────────
 
     document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach(btn => {
@@ -314,43 +359,16 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
         else { dishSort.field = field; dishSort.dir = field === "rating" ? "desc" : "asc"; }
         setSortState(dishSort);
         updateDishSortUI();
-        renderDishes();
+        rerenderRestaurantePage();
       };
     });
 
     document.getElementById("btn-add-dish")!.onclick =
-      () => (window as any).dishForm.open("create", restaurant!.id);
+      () => (window as any).dishForm.open("create", currentRestaurant!.id);
 
-    // ─── Eventos del store ────────────────────────────────────────────────────
-
-    document.addEventListener("dish:created", () => {
-      // Marcar como visitado si es la primera vez. Envuelto en try/catch
-      // para que renderDishes() se ejecute siempre, incluso si algo falla.
-      try {
-        if (restaurant && restaurant.status === "pending") {
-          const updated = markAsVisited(restaurant.id);
-          if (updated) { restaurant = updated; emit("restaurant:visited", updated); }
-        }
-      } catch (err) {
-        console.error("[dish:created] markAsVisited error:", err);
-      }
-      renderDishes();
-    }, { signal });
-    document.addEventListener("dish:updated",  () => renderDishes(), { signal });
-    document.addEventListener("dish:deleted",  () => renderDishes(), { signal });
-    document.addEventListener("restaurant:updated", (e) => {
-      try {
-        const updated = (e as CustomEvent).detail as Restaurant;
-        if (updated?.id === restaurant?.id) restaurant = updated;
-      } catch (err) {
-        console.error("[restaurant:updated] error:", err);
-      }
-      renderDishes();
-    }, { signal });
-
-    // ─── Init render con event wiring ─────────────────────────────────────────
+    // ─── Render inicial con event wiring ─────────────────────────────────────
 
     updateDishSortUI();
-    renderDishes();
+    rerenderRestaurantePage();
   });
 </script>

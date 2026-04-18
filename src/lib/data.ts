@@ -115,8 +115,8 @@ function toDish(row: Record<string, unknown>): Dish {
 }
 
 /** Dispara una operación Supabase en segundo plano sin bloquear la UI. */
-function bgSync(fn: () => Promise<unknown>): void {
-  fn().catch((err) => console.error("[staurant sync]", err));
+function bgSync(fn: () => unknown): void {
+  Promise.resolve(fn()).catch((err) => console.error("[staurant sync]", err));
 }
 
 // ─── Restaurants (síncronos — leen del caché) ──────────────────────────────────
@@ -176,6 +176,10 @@ export function deleteRestaurant(id: string): void {
 
 export function markAsVisited(id: string): Restaurant | null {
   return updateRestaurant(id, { status: "visited" });
+}
+
+export function markAsPending(id: string): Restaurant | null {
+  return updateRestaurant(id, { status: "pending" });
 }
 
 // ─── Dishes (síncronos — leen del caché) ──────────────────────────────────────
