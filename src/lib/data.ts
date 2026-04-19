@@ -29,8 +29,11 @@ interface AppCache {
 
 const CACHE_KEY = "staurant_cache_v2";
 let _userId: string | null = null;
+// Caché en memoria: evita JSON.parse de localStorage en cada lectura.
+// Se sincroniza con localStorage solo en escritura y en el primer initCache.
+let _mem: AppCache | null = null;
 
-function readCache(): AppCache | null {
+function readLocalStorage(): AppCache | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
     return raw ? (JSON.parse(raw) as AppCache) : null;
@@ -40,25 +43,34 @@ function readCache(): AppCache | null {
 }
 
 function writeCache(c: AppCache): void {
+  _mem = c;
   localStorage.setItem(CACHE_KEY, JSON.stringify(c));
 }
 
 function getCache(): AppCache {
-  const c = readCache();
-  if (!c || c.userId !== _userId) return { userId: _userId!, restaurants: [], dishes: [] };
-  return c;
+  // 1. Memoria → lectura directa sin JSON.parse (ruta habitual)
+  if (_mem && _mem.userId === _userId) return _mem;
+  // 2. Primer acceso en esta pestaña → hidratar desde localStorage
+  const persisted = readLocalStorage();
+  if (persisted && persisted.userId === _userId) { _mem = persisted; return _mem; }
+  // 3. Sin datos válidos → vacío
+  return { userId: _userId!, restaurants: [], dishes: [] };
 }
 
 /** Llama esto al inicio de cada página protegida, pasando el userId de la sesión.
- *  - Si hay caché válido → no hace petición a Supabase (instantáneo).
- *  - Primera vez → carga desde Supabase y guarda en caché. */
+ *  - Si hay caché válido (memoria o localStorage) → instantáneo, sin red.
+ *  - Primera vez o usuario distinto → fetch a Supabase y guarda en caché. */
 export async function initCache(userId: string): Promise<void> {
   _userId = userId;
 
-  const cached = readCache();
-  if (cached?.userId === _userId) return; // cache válido, nada que hacer
+  // Si ya tenemos datos en memoria para este usuario, no hacer nada más.
+  if (_mem?.userId === _userId) return;
 
-  // Primera vez: cargar desde Supabase
+  // Intentar hidratar desde localStorage antes de ir a la red.
+  const persisted = readLocalStorage();
+  if (persisted?.userId === _userId) { _mem = persisted; return; }
+
+  // Primera vez: cargar desde Supabase.
   const [rRes, dRes] = await Promise.all([
     supabase.from("restaurants").select("*").eq("user_id", _userId).order("created_at", { ascending: false }),
     supabase.from("dishes").select("*").eq("user_id", _userId).order("created_at", { ascending: false }),
@@ -75,6 +87,7 @@ export async function initCache(userId: string): Promise<void> {
 export function clearCache(): void {
   localStorage.removeItem(CACHE_KEY);
   _userId = null;
+  _mem = null;
 }
 
 /** true si initCache() ya fue llamado en esta sesión de módulo.

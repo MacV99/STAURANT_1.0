@@ -7,6 +7,18 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
 <Layout1 title="STAURANT">
   <div class="app-page">
+    <div class="search-wrap">
+      <i class="bi bi-search search-icon"></i>
+      <input
+        id="restaurant-search"
+        class="search-input"
+        type="search"
+        placeholder="Buscar por nombre o notas..."
+        autocomplete="off"
+        spellcheck="false"
+      />
+    </div>
+
     <TabBar />
 
     <div class="sort-bar">
@@ -44,6 +56,48 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     width: 100%;
   }
 
+  .search-wrap {
+    position: relative;
+    width: 100%;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--clr-text);
+    opacity: 0.45;
+    font-size: 0.95rem;
+    pointer-events: none;
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 11px 16px 11px 38px;
+    border-radius: var(--border-radius);
+    border: 1.5px solid var(--clr-border);
+    background: var(--clr-white);
+    font-size: 0.9rem;
+    color: var(--clr-dark);
+    transition: border-color var(--transition);
+  }
+
+  .search-input::placeholder {
+    color: var(--clr-text);
+    opacity: 0.5;
+  }
+
+  .search-input:focus {
+    outline: none;
+    border-color: var(--clr-primary);
+  }
+
+  /* ocultar el botón nativo de limpiar en Chrome/Safari */
+  .search-input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+
   @media (min-width: 768px) {
     .app-page {
       padding: 28px 24px 100px;
@@ -52,11 +106,11 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 </style>
 
 <script>
+  import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
   import {
     initCache, isCacheLoaded,
     getRestaurants,
-    deleteRestaurant,
     getDishesByRestaurant,
     getRestaurantAverage,
   } from "../lib/data.ts";
@@ -77,6 +131,9 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
   }
 
   let sortState = { field: "date" as SortField, dir: "desc" as SortDir, ...getSortState() };
+
+  // ─── Search state ─────────────────────────────────────────────────────────
+  let searchQuery = "";
 
   function sortRestaurants(list: ReturnType<typeof getRestaurants>) {
     return [...list].sort((a, b) => {
@@ -111,14 +168,27 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
   }
 
   function buildListHTML(status: "visited" | "pending"): string {
-    const all    = getRestaurants().filter(r => r.status === status);
+    const q   = searchQuery.toLowerCase().trim();
+    const all = getRestaurants().filter(r => {
+      if (r.status !== status) return false;
+      if (!q) return true;
+      return r.name.toLowerCase().includes(q) || r.notes.toLowerCase().includes(q);
+    });
     const sorted = sortRestaurants(all);
-    if (sorted.length === 0) return `
-      <div class="empty-state">
-        <i class="bi bi-${status === "visited" ? "journal-check" : "bookmark"}"></i>
-        <p>${status === "visited" ? "Aún no has registrado restaurantes visitados." : "No tienes restaurantes pendientes."}</p>
-        ${status === "visited" ? '<p class="empty-hint">Agrega uno con el botón <strong>+</strong></p>' : ""}
-      </div>`;
+
+    if (sorted.length === 0) {
+      if (q) return `
+        <div class="empty-state">
+          <i class="bi bi-search"></i>
+          <p>Sin resultados para "<strong>${q}</strong>".</p>
+        </div>`;
+      return `
+        <div class="empty-state">
+          <i class="bi bi-${status === "visited" ? "journal-check" : "bookmark"}"></i>
+          <p>${status === "visited" ? "Aún no has registrado restaurantes visitados." : "No tienes restaurantes pendientes."}</p>
+          ${status === "visited" ? '<p class="empty-hint">Agrega uno con el botón <strong>+</strong></p>' : ""}
+        </div>`;
+    }
     return `<div class="cards-grid">${
       sorted.map(r => renderRestaurantCard(r, getRestaurantAverage(r.id), getDishesByRestaurant(r.id).length)).join("")
     }</div>`;
@@ -128,27 +198,11 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
   // Consultan el DOM en cada llamada → inocuas en páginas que no tienen estos
   // elementos, y siempre operan sobre el DOM actual sin closures stale.
 
-  function wireCardActions(container: HTMLElement, restaurants: ReturnType<typeof getRestaurants>) {
+  function wireCardActions(container: HTMLElement) {
     container.querySelectorAll<HTMLElement>(".card-clickable").forEach((card) => {
-      card.addEventListener("click", (e) => {
-        if ((e.target as HTMLElement).closest("button")) return;
+      card.addEventListener("click", () => {
         const href = card.dataset.href;
-        if (href) window.location.href = href;
-      });
-    });
-    container.querySelectorAll<HTMLButtonElement>(".btn-edit-restaurant").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const r = restaurants.find((r) => r.id === btn.dataset.id);
-        if (r) (window as any).restaurantForm.open("edit", r);
-      });
-    });
-    container.querySelectorAll<HTMLButtonElement>(".btn-delete-restaurant").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const r = restaurants.find((r) => r.id === btn.dataset.id);
-        (window as any).confirmDialog.show(
-          `¿Eliminar "${r?.name}"? Se borrarán también sus platos.`,
-          () => { deleteRestaurant(btn.dataset.id!); renderBoth(); }
-        );
+        if (href) navigate(href);
       });
     });
   }
@@ -156,7 +210,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
   function renderList(status: "visited" | "pending", container: HTMLElement) {
     container.innerHTML = buildListHTML(status);
     const sorted = sortRestaurants(getRestaurants().filter(r => r.status === status));
-    if (sorted.length > 0) wireCardActions(container, sorted);
+    if (sorted.length > 0) wireCardActions(container);
   }
 
   function updateCounts() {
@@ -277,6 +331,12 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
     const fabEl = document.getElementById("btn-add-restaurant")!;
     fabEl.onclick = () => (window as any).restaurantForm.open("create");
+
+    const searchEl = document.getElementById("restaurant-search") as HTMLInputElement | null;
+    if (searchEl) {
+      searchEl.value = searchQuery; // restaurar si vuelve con navegación
+      searchEl.oninput = () => { searchQuery = searchEl.value; renderBoth(); };
+    }
 
     // ─── Render inicial ───────────────────────────────────────────────────────
 

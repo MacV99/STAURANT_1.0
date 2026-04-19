@@ -12,7 +12,7 @@ export function getRatingClass(score: number): string {
 export function getRatingBadgeHTML(score: number | null): string {
   if (score === null) return `<span class="rating-badge badge-empty"><i class="bi bi-star"></i></span>`;
   const cls = getRatingClass(score);
-  return `<span class="rating-badge ${cls}"><i class="bi bi-star-fill rating-star"></i><span class="rating-num">${score}</span></span>`;
+  return `<span class="rating-badge ${cls}"><span class="rating-num">${score}</span></span>`;
 }
 
 // ─── HTML renderers ────────────────────────────────────────────────────────────
@@ -28,25 +28,12 @@ export function renderRestaurantCard(
     : `<span class="pending-tag"><i class="bi bi-bookmark"></i> Pendiente</span>`;
 
   return `
-    <article class="restaurant-card card-clickable" data-href="/restaurante?id=${r.id}">
-      <div class="card-main">
-        ${badge}
-        <div class="card-body">
-          <h3>${escapeHtml(r.name)}</h3>
-          ${r.notes ? `<p class="card-notes">${escapeHtml(r.notes)}</p>` : ""}
-          <div class="card-meta">
-            ${dishPill}
-          </div>
-        </div>
+    <article class="restaurant-card card-clickable" data-href="/restaurante?id=${r.id}" style="view-transition-name: restaurant-${r.id}">
+      <div class="card-body">
+        <h3>${escapeHtml(r.name)}</h3>
+        ${dishPill}
       </div>
-      <div class="card-actions">
-        <button class="btn-edit-restaurant boton2" data-id="${r.id}">
-          <i class="bi bi-pencil"></i>
-        </button>
-        <button class="btn-delete-restaurant boton2" data-id="${r.id}">
-          <i class="bi bi-trash"></i>
-        </button>
-      </div>
+      ${badge}
     </article>
   `;
 }

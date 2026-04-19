@@ -161,7 +161,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     const dishes    = getDishesByRestaurant(r.id);
     const isPending = r.status === "pending";
     return `
-      <div class="rh-card">
+      <div class="rh-card" style="view-transition-name: restaurant-${r.id}">
         <div class="rh-top">
           ${getRatingBadgeHTML(avg)}
           <div class="rh-meta">
