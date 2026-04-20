@@ -1,8 +1,19 @@
 ---
 import Layout1 from "../layouts/Layout1.astro";
 import TabBar from "../components/TabBar.astro";
+import SortBar from "../components/SortBar.astro";
 import RestaurantForm from "../components/RestaurantForm.astro";
 import ConfirmDialog from "../components/ConfirmDialog.astro";
+import RestaurantCard from "../components/RestaurantCard.astro";
+import type { Restaurant } from "../lib/data";
+
+const tplRestaurant: Restaurant = {
+  id: "",
+  name: "",
+  status: "visited",
+  notes: "",
+  createdAt: "",
+};
 ---
 
 <Layout1 title="STAURANT">
@@ -21,14 +32,11 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
     <TabBar />
 
-    <div class="sort-bar">
-      <span class="sort-label">Ordenar</span>
-      <div class="sort-pills">
-        <button class="sort-pill" data-field="date"><i class="bi bi-arrow-down-up"></i> Fecha</button>
-        <button class="sort-pill" data-field="name"><i class="bi bi-arrow-down-up"></i> Nombre</button>
-        <button class="sort-pill" data-field="rating"><i class="bi bi-arrow-down-up"></i> Rating</button>
-      </div>
-    </div>
+    <SortBar pills={[
+      { field: "date",   label: "Fecha" },
+      { field: "name",   label: "Nombre" },
+      { field: "rating", label: "Rating" },
+    ]} />
 
     <div id="tab-visitados" class="tab-content" role="tabpanel" hidden></div>
     <div id="tab-pendientes" class="tab-content" role="tabpanel" hidden></div>
@@ -40,6 +48,11 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
   <RestaurantForm />
   <ConfirmDialog />
+
+  <!-- Template renderizado por Astro en build time; el JS cliente lo clona para cada tarjeta -->
+  <template id="tpl-restaurant-card">
+    <RestaurantCard restaurant={tplRestaurant} avg={null} dishCount={0} />
+  </template>
 </Layout1>
 
 <style>
@@ -113,8 +126,9 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     getRestaurants,
     getDishesByRestaurant,
     getRestaurantAverage,
+    type Restaurant,
   } from "../lib/data.ts";
-  import { renderRestaurantCard } from "../scripts/store.ts";
+  import { getRatingClass } from "../scripts/store.ts";
 
   // ─── Sort state (persiste entre navegaciones en memoria de módulo) ──────────
 
@@ -123,14 +137,20 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
   const SORT_KEY = "staurant_sort_r";
 
   function getSortState(): { field: SortField; dir: SortDir } {
-    try { return JSON.parse(localStorage.getItem(SORT_KEY) ?? "{}"); }
+    try {
+      const saved = JSON.parse(localStorage.getItem(SORT_KEY) ?? "{}");
+      return {
+        field: (saved.field as SortField) ?? "date",
+        dir:   (saved.dir   as SortDir)   ?? "desc",
+      };
+    }
     catch { return { field: "date", dir: "desc" }; }
   }
   function setSortState(s: { field: SortField; dir: SortDir }) {
     localStorage.setItem(SORT_KEY, JSON.stringify(s));
   }
 
-  let sortState = { field: "date" as SortField, dir: "desc" as SortDir, ...getSortState() };
+  let sortState = getSortState();
 
   // ─── Search state ─────────────────────────────────────────────────────────
   let searchQuery = "";
@@ -167,7 +187,41 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     });
   }
 
-  function buildListHTML(status: "visited" | "pending"): string {
+  // ─── Construye un elemento <article> clonando el template del componente ────
+
+  function buildRestaurantCardElement(r: Restaurant, avg: number | null, dishCount: number): Element {
+    const tpl = document.getElementById("tpl-restaurant-card") as HTMLTemplateElement;
+    const article = (tpl.content.cloneNode(true) as DocumentFragment).querySelector("article")!;
+
+    article.setAttribute("data-href", `/restaurante?id=${r.id}`);
+    article.setAttribute("style", `view-transition-name: restaurant-${r.id}`);
+    article.querySelector("h3")!.textContent = r.name;
+
+    const pill = article.querySelector(".dish-count-pill")!;
+    if (r.status === "pending") {
+      const pendingSpan = document.createElement("span");
+      pendingSpan.className = "pending-tag";
+      pendingSpan.innerHTML = '<i class="bi bi-bookmark"></i> Pendiente';
+      pill.replaceWith(pendingSpan);
+    } else {
+      pill.innerHTML = `<i class="bi bi-journal-text"></i> ${dishCount} ${dishCount === 1 ? "plato" : "platos"}`;
+    }
+
+    const badge = article.querySelector(".rating-badge")!;
+    if (avg === null) {
+      badge.className = "rating-badge badge-empty";
+      badge.innerHTML = '<i class="bi bi-star"></i>';
+    } else {
+      badge.className = `rating-badge ${getRatingClass(avg)}`;
+      badge.innerHTML = `<span class="rating-num">${avg}</span>`;
+    }
+
+    return article;
+  }
+
+  // ─── Render ───────────────────────────────────────────────────────────────
+
+  function renderList(status: "visited" | "pending", container: HTMLElement) {
     const q   = searchQuery.toLowerCase().trim();
     const all = getRestaurants().filter(r => {
       if (r.status !== status) return false;
@@ -177,40 +231,28 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     const sorted = sortRestaurants(all);
 
     if (sorted.length === 0) {
-      if (q) return `
-        <div class="empty-state">
-          <i class="bi bi-search"></i>
-          <p>Sin resultados para "<strong>${q}</strong>".</p>
-        </div>`;
-      return `
-        <div class="empty-state">
-          <i class="bi bi-${status === "visited" ? "journal-check" : "bookmark"}"></i>
-          <p>${status === "visited" ? "Aún no has registrado restaurantes visitados." : "No tienes restaurantes pendientes."}</p>
-          ${status === "visited" ? '<p class="empty-hint">Agrega uno con el botón <strong>+</strong></p>' : ""}
-        </div>`;
+      container.innerHTML = q
+        ? `<div class="empty-state">
+             <i class="bi bi-search"></i>
+             <p>Sin resultados para "<strong>${q}</strong>".</p>
+           </div>`
+        : `<div class="empty-state">
+             <i class="bi bi-${status === "visited" ? "journal-check" : "bookmark"}"></i>
+             <p>${status === "visited" ? "Aún no has registrado restaurantes visitados." : "No tienes restaurantes pendientes."}</p>
+             ${status === "visited" ? '<p class="empty-hint">Agrega uno con el botón <strong>+</strong></p>' : ""}
+           </div>`;
+      return;
     }
-    return `<div class="cards-grid">${
-      sorted.map(r => renderRestaurantCard(r, getRestaurantAverage(r.id), getDishesByRestaurant(r.id).length)).join("")
-    }</div>`;
-  }
 
-  // ─── Funciones de render a nivel de módulo ────────────────────────────────
-  // Consultan el DOM en cada llamada → inocuas en páginas que no tienen estos
-  // elementos, y siempre operan sobre el DOM actual sin closures stale.
-
-  function wireCardActions(container: HTMLElement) {
-    container.querySelectorAll<HTMLElement>(".card-clickable").forEach((card) => {
-      card.addEventListener("click", () => {
-        const href = card.dataset.href;
-        if (href) navigate(href);
-      });
+    container.innerHTML = "";
+    const grid = document.createElement("div");
+    grid.className = "cards-grid";
+    sorted.forEach(r => {
+      const card = buildRestaurantCardElement(r, getRestaurantAverage(r.id), getDishesByRestaurant(r.id).length);
+      card.addEventListener("click", () => navigate(`/restaurante?id=${r.id}`));
+      grid.appendChild(card);
     });
-  }
-
-  function renderList(status: "visited" | "pending", container: HTMLElement) {
-    container.innerHTML = buildListHTML(status);
-    const sorted = sortRestaurants(getRestaurants().filter(r => r.status === status));
-    if (sorted.length > 0) wireCardActions(container);
+    container.appendChild(grid);
   }
 
   function updateCounts() {
@@ -254,8 +296,6 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
   }
 
   // ─── Listeners permanentes a nivel de módulo ──────────────────────────────
-  // Registrados una sola vez. renderBoth/activateTab son inocuas si no
-  // estamos en la página principal (retornan early al no encontrar los divs).
 
   document.addEventListener("restaurant:created", () => { renderBoth(); activateTab("pendientes"); });
   document.addEventListener("restaurant:updated", () => renderBoth());
@@ -270,8 +310,8 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
     const activeTab = getActiveTab();
 
-    tabVisitadosEl.innerHTML  = buildListHTML("visited");
-    if (tabPendientesEl) tabPendientesEl.innerHTML = buildListHTML("pending");
+    renderList("visited",  tabVisitadosEl);
+    if (tabPendientesEl) renderList("pending", tabPendientesEl);
 
     tabVisitadosEl.hidden  = activeTab !== "visitados";
     if (tabPendientesEl) tabPendientesEl.hidden = activeTab !== "pendientes";
@@ -301,14 +341,11 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
   document.addEventListener("astro:page-load", async () => {
     const tabVisitadosEl = document.getElementById("tab-visitados");
-    if (!tabVisitadosEl) return; // no estamos en la página principal
+    if (!tabVisitadosEl) return;
 
-    // Auth (getSession lee localStorage — instantáneo)
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { window.location.href = "/login"; return; }
     await initCache(session.user.id);
-
-    // ─── Cablear controles (onclick evita acumulación de listeners) ───────────
 
     document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
       btn.onclick = () => {
@@ -317,7 +354,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
           sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
         } else {
           sortState.field = field;
-          sortState.dir = field === "rating" ? "desc" : "asc";
+          sortState.dir = field === "name" ? "asc" : "desc";
         }
         setSortState(sortState);
         updateSortUI();
@@ -334,11 +371,9 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
     const searchEl = document.getElementById("restaurant-search") as HTMLInputElement | null;
     if (searchEl) {
-      searchEl.value = searchQuery; // restaurar si vuelve con navegación
+      searchEl.value = searchQuery;
       searchEl.oninput = () => { searchQuery = searchEl.value; renderBoth(); };
     }
-
-    // ─── Render inicial ───────────────────────────────────────────────────────
 
     updateSortUI();
     renderBoth();

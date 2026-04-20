@@ -1,0 +1,105 @@
+---
+import type { Dish } from "../lib/data";
+import RatingBadge from "./RatingBadge.astro";
+
+interface Props {
+  dish: Dish;
+}
+
+const { dish: d } = Astro.props;
+---
+
+<article class="dish-card" data-id={d.id}>
+  <div class="dish-info">
+    <h4>{d.name}</h4>
+    {d.notes && <p class="dish-notes">{d.notes}</p>}
+  </div>
+  <div class="dish-actions">
+    <RatingBadge score={d.rating} />
+    <button class="btn-edit-dish boton2" data-id={d.id}>
+      <i class="bi bi-pencil"></i>
+    </button>
+    <button class="btn-delete-dish boton2" data-id={d.id}>
+      <i class="bi bi-trash"></i>
+    </button>
+  </div>
+</article>
+
+<style>
+  .dish-card {
+    background: #ffffff;
+    border: none;
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow:
+      0 2px 10px rgba(84, 107, 65, 0.07),
+      0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: var(--transition);
+  }
+
+  .dish-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .dish-info h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: var(--clr-dark);
+  }
+
+  .dish-info .dish-notes {
+    font-size: 0.8rem;
+    color: var(--clr-text);
+    margin-top: 3px;
+    line-height: 1.4;
+    opacity: 0.75;
+  }
+
+  .dish-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .dish-actions button {
+    font-size: 0.9rem;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+    letter-spacing: 0;
+    text-transform: none;
+    background: var(--clr-white2);
+    color: var(--clr-primary);
+    border-color: var(--clr-border);
+  }
+
+  .dish-actions .btn-delete-dish {
+    color: #b02a3a;
+    background: #fce8ec;
+    border-color: #f0b8c0;
+  }
+
+  @media (hover: hover) {
+    .dish-card:hover {
+      box-shadow:
+        0 4px 16px rgba(84, 107, 65, 0.14),
+        0 1px 4px rgba(0, 0, 0, 0.07);
+    }
+
+    .dish-actions .btn-edit-dish:hover {
+      background: var(--clr-border);
+    }
+
+    .dish-actions .btn-delete-dish:hover {
+      background: #f0b8c0;
+    }
+  }
+</style>

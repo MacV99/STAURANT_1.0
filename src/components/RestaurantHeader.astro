@@ -1,0 +1,132 @@
+---
+import type { Restaurant } from "../lib/data";
+import RatingBadge from "./RatingBadge.astro";
+
+interface Props {
+  restaurant: Restaurant;
+  avg: number | null;
+  dishCount: number;
+}
+
+const { restaurant: r, avg, dishCount } = Astro.props;
+const isPending = r.status === "pending";
+---
+
+<div class="rh-card" style={`view-transition-name: restaurant-${r.id}`}>
+  <div class="rh-top">
+    <RatingBadge score={avg} />
+    <div class="rh-meta">
+      <h1 class="rh-name">{r.name}</h1>
+      <div class="rh-pills">
+        {isPending
+          ? <span class="pending-tag"><i class="bi bi-bookmark"></i> Pendiente</span>
+          : <span class="dish-count-pill">
+              <i class="bi bi-journal-text"></i> {dishCount} {dishCount === 1 ? "plato" : "platos"}
+            </span>
+        }
+      </div>
+    </div>
+    <div class="rh-actions">
+      <button class="btn-edit-rh boton2" data-id={r.id} aria-label="Editar restaurante">
+        <i class="bi bi-pencil"></i>
+      </button>
+      <button class="btn-delete-rh boton2" data-id={r.id} aria-label="Eliminar restaurante">
+        <i class="bi bi-trash"></i>
+      </button>
+    </div>
+  </div>
+  {r.notes && <p class="rh-notes">{r.notes}</p>}
+</div>
+
+<style>
+  .rh-card {
+    background: #ffffff;
+    border: none;
+    border-radius: 20px;
+    padding: 22px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 4px 20px rgba(84, 107, 65, 0.1), 0 1px 4px rgba(0, 0, 0, 0.06);
+  }
+
+  .rh-top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .rh-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .rh-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+    align-self: flex-start;
+  }
+
+  .rh-actions button {
+    font-size: 0.9rem;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+    letter-spacing: 0;
+    text-transform: none;
+    background: var(--clr-white2);
+    color: var(--clr-primary);
+    border-color: var(--clr-border);
+  }
+
+  .rh-actions .btn-delete-rh {
+    color: #b02a3a;
+    background: #fce8ec;
+    border-color: #f0b8c0;
+  }
+
+  .rh-pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .rh-name {
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: var(--clr-dark);
+  }
+
+  .rh-notes {
+    font-size: 0.85rem;
+    color: var(--clr-text);
+    line-height: 1.6;
+    opacity: 0.8;
+  }
+
+  @media (hover: hover) {
+    .rh-actions .btn-edit-rh:hover {
+      background: var(--clr-border);
+    }
+
+    .rh-actions .btn-delete-rh:hover {
+      background: #f0b8c0;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .rh-card {
+      padding: 24px 28px;
+    }
+
+    .rh-name {
+      font-size: 1.7rem;
+    }
+  }
+</style>

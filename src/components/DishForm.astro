@@ -213,8 +213,9 @@
   // Re-inicializar en cada navegación para que open/close siempre
   // operen sobre los elementos del DOM ACTUAL (no los del swap anterior).
   document.addEventListener("astro:page-load", () => {
-    const overlay = document.getElementById("dish-form-overlay");
-    if (!overlay) return; // no está en esta página
+    const overlayEl = document.getElementById("dish-form-overlay");
+    if (!overlayEl) return; // no está en esta página
+    const overlay: HTMLElement = overlayEl;
 
     const form              = document.getElementById("dish-form") as HTMLFormElement;
     const titleEl           = document.getElementById("dish-form-title")!;

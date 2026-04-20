@@ -52,8 +52,10 @@ Every page sets up an `AbortController` to clean up listeners on navigation (pre
 ### CSS architecture
 
 - **`global.css`** — Variables, reset, typography, layout helpers (`.flex-column`, `.flex-row`, `.boton`, `.boton2`, `.cards-grid`), modal overlay
-- **`project.css`** — Component-specific styles (cards, badges, forms, modals)
-- **Scoped `<style>` blocks** — Used sparingly for component-specific overrides
+- **`project.css`** — Styles shared across multiple files: `.overlay`, rating badge classes, `.dish-count-pill`, `.pending-tag`, `.empty-state`, `.fab`. Only add here if used in 2+ places.
+- **Scoped `<style>` blocks** — Default for all component styles. UI components (`RestaurantCard`, `DishCard`, `RestaurantHeader`, `SortBar`) own their CSS this way.
+
+Dynamic content uses the **template cloning pattern**: the component is rendered inside an HTML `<template>` at build time (preserving `data-astro-cid-*` attributes), then JS clones and fills it at runtime — scoped CSS applies to cloned elements automatically.
 
 Design tokens in `global.css`:
 ```css
