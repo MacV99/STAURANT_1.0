@@ -69,8 +69,9 @@
   // Re-inicializar en cada navegación para que show/hide siempre
   // operen sobre los elementos del DOM ACTUAL (no los del swap anterior).
   document.addEventListener("astro:page-load", () => {
-    const overlay = document.getElementById("confirm-overlay");
-    if (!overlay) return; // no está en esta página
+    const overlayEl = document.getElementById("confirm-overlay");
+    if (!overlayEl) return; // no está en esta página
+    const overlay: HTMLElement = overlayEl;
 
     const msgEl = document.getElementById("confirm-message")!;
     const cancelBtn = document.getElementById("confirm-cancel")!;

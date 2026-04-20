@@ -137,14 +137,20 @@ const tplRestaurant: Restaurant = {
   const SORT_KEY = "staurant_sort_r";
 
   function getSortState(): { field: SortField; dir: SortDir } {
-    try { return JSON.parse(localStorage.getItem(SORT_KEY) ?? "{}"); }
+    try {
+      const saved = JSON.parse(localStorage.getItem(SORT_KEY) ?? "{}");
+      return {
+        field: (saved.field as SortField) ?? "date",
+        dir:   (saved.dir   as SortDir)   ?? "desc",
+      };
+    }
     catch { return { field: "date", dir: "desc" }; }
   }
   function setSortState(s: { field: SortField; dir: SortDir }) {
     localStorage.setItem(SORT_KEY, JSON.stringify(s));
   }
 
-  let sortState = { field: "date" as SortField, dir: "desc" as SortDir, ...getSortState() };
+  let sortState = getSortState();
 
   // ─── Search state ─────────────────────────────────────────────────────────
   let searchQuery = "";

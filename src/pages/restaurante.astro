@@ -144,13 +144,19 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
   const SORT_KEY = "staurant_sort_d";
 
   function getSortState(): { field: SortField; dir: SortDir } {
-    try { return JSON.parse(localStorage.getItem(SORT_KEY) ?? "{}"); }
+    try {
+      const saved = JSON.parse(localStorage.getItem(SORT_KEY) ?? "{}");
+      return {
+        field: (saved.field as SortField) ?? "rating",
+        dir:   (saved.dir   as SortDir)   ?? "desc",
+      };
+    }
     catch { return { field: "rating", dir: "desc" }; }
   }
   function setSortState(s: { field: SortField; dir: SortDir }) {
     localStorage.setItem(SORT_KEY, JSON.stringify(s));
   }
-  let dishSort = { field: "rating" as SortField, dir: "desc" as SortDir, ...getSortState() };
+  let dishSort = getSortState();
 
   function sortDishes(dishes: ReturnType<typeof getDishesByRestaurant>) {
     return [...dishes].sort((a, b) => {
