@@ -137,58 +137,6 @@
   opacity: 0.6;
 }
 
-/* === SORT BAR === */
-
-.sort-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.sort-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--clr-text);
-  opacity: 0.5;
-  flex-shrink: 0;
-}
-
-.sort-pills {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.sort-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 12px;
-  border-radius: 20px;
-  border: solid 1.5px var(--clr-border);
-  background: transparent;
-  color: var(--clr-text);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: none;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.sort-pill.active {
-  background: var(--clr-primary);
-  border-color: var(--clr-primary);
-  color: #ffffff;
-}
-
-.sort-pill i {
-  font-size: 0.65rem;
-}
-
 /* === FAB (botón flotante fijo) === */
 
 .fab {

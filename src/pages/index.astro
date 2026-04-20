@@ -1,6 +1,7 @@
 ---
 import Layout1 from "../layouts/Layout1.astro";
 import TabBar from "../components/TabBar.astro";
+import SortBar from "../components/SortBar.astro";
 import RestaurantForm from "../components/RestaurantForm.astro";
 import ConfirmDialog from "../components/ConfirmDialog.astro";
 import RestaurantCard from "../components/RestaurantCard.astro";
@@ -31,14 +32,11 @@ const tplRestaurant: Restaurant = {
 
     <TabBar />
 
-    <div class="sort-bar">
-      <span class="sort-label">Ordenar</span>
-      <div class="sort-pills">
-        <button class="sort-pill" data-field="date"><i class="bi bi-arrow-down-up"></i> Fecha</button>
-        <button class="sort-pill" data-field="name"><i class="bi bi-arrow-down-up"></i> Nombre</button>
-        <button class="sort-pill" data-field="rating"><i class="bi bi-arrow-down-up"></i> Rating</button>
-      </div>
-    </div>
+    <SortBar pills={[
+      { field: "date",   label: "Fecha" },
+      { field: "name",   label: "Nombre" },
+      { field: "rating", label: "Rating" },
+    ]} />
 
     <div id="tab-visitados" class="tab-content" role="tabpanel" hidden></div>
     <div id="tab-pendientes" class="tab-content" role="tabpanel" hidden></div>
