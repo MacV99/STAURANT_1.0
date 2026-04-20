@@ -111,79 +111,6 @@
   padding: 3px 10px;
 }
 
-/* === RESTAURANT HEADER (detail page) === */
-
-.rh-card {
-  background: #ffffff;
-  border: none;
-  border-radius: 20px;
-  padding: 22px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  box-shadow: 0 4px 20px rgba(84, 107, 65, 0.1), 0 1px 4px rgba(0, 0, 0, 0.06);
-}
-
-.rh-top {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.rh-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  flex: 1;
-  min-width: 0;
-}
-
-.rh-actions {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-  align-self: flex-start;
-}
-
-.rh-actions button {
-  font-size: 0.9rem;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border-radius: 50%;
-  letter-spacing: 0;
-  text-transform: none;
-  background: var(--clr-white2);
-  color: var(--clr-primary);
-  border-color: var(--clr-border);
-}
-
-.rh-actions .btn-delete-rh {
-  color: #b02a3a;
-  background: #fce8ec;
-  border-color: #f0b8c0;
-}
-
-.rh-pills {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.rh-name {
-  font-size: 1.4rem;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  color: var(--clr-dark);
-}
-
-.rh-notes {
-  font-size: 0.85rem;
-  color: var(--clr-text);
-  line-height: 1.6;
-  opacity: 0.8;
-}
-
 /* === EMPTY STATE === */
 
 .empty-state {
@@ -294,14 +221,6 @@
 
 @media (hover: hover) {
 
-  .rh-actions .btn-edit-rh:hover {
-    background: var(--clr-border);
-  }
-
-  .rh-actions .btn-delete-rh:hover {
-    background: #f0b8c0;
-  }
-
   .fab:hover {
     background: var(--clr-primary-dark);
     border-color: var(--clr-primary-dark);
@@ -319,14 +238,6 @@
 @media (min-width: 768px) {
   .cards-grid {
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  .rh-card {
-    padding: 24px 28px;
-  }
-
-  .rh-name {
-    font-size: 1.7rem;
   }
 
   .rating-badge {

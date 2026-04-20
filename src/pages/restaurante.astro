@@ -4,9 +4,11 @@ import DishForm from "../components/DishForm.astro";
 import RestaurantForm from "../components/RestaurantForm.astro";
 import ConfirmDialog from "../components/ConfirmDialog.astro";
 import DishCard from "../components/DishCard.astro";
-import type { Dish } from "../lib/data";
+import RestaurantHeader from "../components/RestaurantHeader.astro";
+import type { Dish, Restaurant } from "../lib/data";
 
 const tplDish: Dish = { id: "", restaurantId: "", name: "...", rating: 5, notes: " ", createdAt: "" };
+const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", notes: " ", createdAt: "" };
 ---
 
 <Layout1 title="Restaurante · STAURANT">
@@ -44,6 +46,10 @@ const tplDish: Dish = { id: "", restaurantId: "", name: "...", rating: 5, notes:
 
   <template id="tpl-dish-card">
     <DishCard dish={tplDish} />
+  </template>
+
+  <template id="tpl-restaurant-header">
+    <RestaurantHeader restaurant={tplRestaurant} avg={5} dishCount={0} />
   </template>
 </Layout1>
 
@@ -128,11 +134,10 @@ const tplDish: Dish = { id: "", restaurantId: "", name: "...", rating: 5, notes:
     initCache, isCacheLoaded,
     getRestaurants, getDishesByRestaurant,
     deleteDish, deleteRestaurant, getRestaurantAverage,
-    markAsVisited, markAsPending, escapeHtml,
+    markAsVisited, markAsPending,
   } from "../lib/data.ts";
-  import type { Restaurant } from "../lib/data.ts";
-  import { getRatingBadgeHTML, getRatingClass, emit } from "../scripts/store.ts";
-  import type { Dish } from "../lib/data.ts";
+  import type { Restaurant, Dish } from "../lib/data.ts";
+  import { getRatingClass, emit } from "../scripts/store.ts";
 
   // ─── Sort state (persiste en módulo entre navegaciones) ────────────────────
 
@@ -166,33 +171,45 @@ const tplDish: Dish = { id: "", restaurantId: "", name: "...", rating: 5, notes:
 
   // ─── Generadores de HTML (nivel módulo) ────────────────────────────────────
 
-  function buildHeaderHTML(r: Restaurant, avg: number | null): string {
-    const dishes    = getDishesByRestaurant(r.id);
-    const isPending = r.status === "pending";
-    return `
-      <div class="rh-card" style="view-transition-name: restaurant-${r.id}">
-        <div class="rh-top">
-          ${getRatingBadgeHTML(avg)}
-          <div class="rh-meta">
-            <h1 class="rh-name">${escapeHtml(r.name)}</h1>
-            <div class="rh-pills">
-              ${isPending
-                ? `<span class="pending-tag"><i class="bi bi-bookmark"></i> Pendiente</span>`
-                : `<span class="dish-count-pill"><i class="bi bi-journal-text"></i> ${dishes.length} ${dishes.length === 1 ? "plato" : "platos"}</span>`
-              }
-            </div>
-          </div>
-          <div class="rh-actions">
-            <button class="btn-edit-rh boton2" data-id="${r.id}" aria-label="Editar restaurante">
-              <i class="bi bi-pencil"></i>
-            </button>
-            <button class="btn-delete-rh boton2" data-id="${r.id}" aria-label="Eliminar restaurante">
-              <i class="bi bi-trash"></i>
-            </button>
-          </div>
-        </div>
-        ${r.notes ? `<p class="rh-notes">${escapeHtml(r.notes)}</p>` : ""}
-      </div>`;
+  function buildHeaderElement(r: Restaurant, avg: number | null): Element {
+    const tpl = document.getElementById("tpl-restaurant-header") as HTMLTemplateElement;
+    const div = (tpl.content.cloneNode(true) as DocumentFragment).querySelector(".rh-card")!;
+    div.setAttribute("style", `view-transition-name: restaurant-${r.id}`);
+    div.querySelector("h1")!.textContent = r.name;
+    const dishes = getDishesByRestaurant(r.id);
+    const pill = div.querySelector(".dish-count-pill");
+    if (r.status === "pending") {
+      const pendingSpan = document.createElement("span");
+      pendingSpan.className = "pending-tag";
+      pendingSpan.innerHTML = '<i class="bi bi-bookmark"></i> Pendiente';
+      pill?.replaceWith(pendingSpan);
+    } else {
+      if (pill) pill.innerHTML = `<i class="bi bi-journal-text"></i> ${dishes.length} ${dishes.length === 1 ? "plato" : "platos"}`;
+    }
+    const badge = div.querySelector(".rating-badge")!;
+    if (avg === null) {
+      badge.className = "rating-badge badge-empty";
+      badge.innerHTML = '<i class="bi bi-star"></i>';
+    } else {
+      badge.className = `rating-badge ${getRatingClass(avg)}`;
+      badge.innerHTML = `<span class="rating-num">${avg}</span>`;
+    }
+    const notesEl = div.querySelector<HTMLElement>(".rh-notes");
+    if (r.notes) {
+      notesEl!.textContent = r.notes;
+    } else {
+      notesEl?.remove();
+    }
+    div.querySelector<HTMLButtonElement>(".btn-edit-rh")!.addEventListener("click", () => {
+      (window as any).restaurantForm.open("edit", r);
+    });
+    div.querySelector<HTMLButtonElement>(".btn-delete-rh")!.addEventListener("click", () => {
+      (window as any).confirmDialog.show(
+        `¿Eliminar "${r.name}"? Se borrarán también sus platos.`,
+        () => { deleteRestaurant(r.id); window.location.href = "/"; }
+      );
+    });
+    return div;
   }
 
   function buildDishCardElement(d: Dish): Element {
@@ -239,31 +256,16 @@ const tplDish: Dish = { id: "", restaurantId: "", name: "...", rating: 5, notes:
   // ─── Funciones de render y wiring a nivel de módulo ───────────────────────
   // Consultan el DOM en cada llamada → inocuas en páginas sin estos elementos.
 
-  function wireHeaderEvents() {
-    const headerEl = document.getElementById("restaurant-header");
-    if (!headerEl || !currentRestaurant) return;
-    headerEl.querySelector<HTMLButtonElement>(".btn-edit-rh")?.addEventListener("click", () => {
-      (window as any).restaurantForm.open("edit", currentRestaurant!);
-    });
-    headerEl.querySelector<HTMLButtonElement>(".btn-delete-rh")?.addEventListener("click", () => {
-      (window as any).confirmDialog.show(
-        `¿Eliminar "${currentRestaurant?.name}"? Se borrarán también sus platos.`,
-        () => { deleteRestaurant(currentRestaurant!.id); window.location.href = "/"; }
-      );
-    });
-  }
-
   function rerenderRestaurantePage() {
-    const headerEl    = document.getElementById("restaurant-header");
+    const headerEl     = document.getElementById("restaurant-header");
     const dishesListEl = document.getElementById("dishes-list");
-    const sortBarEl   = document.querySelector<HTMLElement>(".sort-bar");
+    const sortBarEl    = document.querySelector<HTMLElement>(".sort-bar");
     if (!headerEl || !dishesListEl || !currentRestaurant) return;
 
     const avg    = getRestaurantAverage(currentRestaurant.id);
     const sorted = sortDishes(getDishesByRestaurant(currentRestaurant.id));
 
-    headerEl.innerHTML = buildHeaderHTML(currentRestaurant, avg);
-    wireHeaderEvents();
+    headerEl.replaceChildren(buildHeaderElement(currentRestaurant, avg));
     renderDishes(sorted, dishesListEl, sortBarEl);
   }
 
@@ -328,7 +330,7 @@ const tplDish: Dish = { id: "", restaurantId: "", name: "...", rating: 5, notes:
     const avg    = getRestaurantAverage(restaurant.id);
     const sorted = sortDishes(getDishesByRestaurant(restaurant.id));
 
-    headerEl.innerHTML = buildHeaderHTML(restaurant, avg);
+    headerEl.replaceChildren(buildHeaderElement(restaurant, avg));
 
     const dishesListEl = document.getElementById("dishes-list");
     const sortBarEl    = document.querySelector<HTMLElement>(".sort-bar");
@@ -372,7 +374,7 @@ const tplDish: Dish = { id: "", restaurantId: "", name: "...", rating: 5, notes:
       btn.onclick = () => {
         const field = btn.dataset.field as SortField;
         if (dishSort.field === field) dishSort.dir = dishSort.dir === "asc" ? "desc" : "asc";
-        else { dishSort.field = field; dishSort.dir = field === "rating" ? "desc" : "asc"; }
+        else { dishSort.field = field; dishSort.dir = field === "name" ? "asc" : "desc"; }
         setSortState(dishSort);
         updateDishSortUI();
         rerenderRestaurantePage();

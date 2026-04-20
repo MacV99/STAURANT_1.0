@@ -350,7 +350,7 @@ const tplRestaurant: Restaurant = {
           sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
         } else {
           sortState.field = field;
-          sortState.dir = field === "rating" ? "desc" : "asc";
+          sortState.dir = field === "name" ? "asc" : "desc";
         }
         setSortState(sortState);
         updateSortUI();
