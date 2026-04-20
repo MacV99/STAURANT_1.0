@@ -4,14 +4,14 @@ interface Props {
 }
 const { score } = Astro.props;
 
-let cls = "badge-empty";
-let label = "—";
-if (score !== null) {
-  label = String(score);
-  if (score <= 4) cls = "badge-low";
-  else if (score <= 7) cls = "badge-mid";
-  else cls = "badge-high";
-}
+const cls = score === null
+  ? "badge-empty"
+  : score <= 4 ? "badge-low"
+  : score <= 7 ? "badge-mid"
+  : "badge-high";
 ---
 
-<span class={`rating-badge ${cls}`}>{label}</span>
+{score === null
+  ? <span class={`rating-badge ${cls}`}><i class="bi bi-star"></i></span>
+  : <span class={`rating-badge ${cls}`}><span class="rating-num">{score}</span></span>
+}

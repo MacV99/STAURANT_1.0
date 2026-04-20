@@ -17,6 +17,7 @@ export function getRatingBadgeHTML(score: number | null): string {
 
 // ─── HTML renderers ────────────────────────────────────────────────────────────
 
+/** Runtime renderer para inyección via innerHTML. Template canónico: src/components/RestaurantCard.astro */
 export function renderRestaurantCard(
   r: Restaurant,
   avg: number | null,

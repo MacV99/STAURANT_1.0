@@ -80,63 +80,7 @@
   gap: 7px;
 }
 
-/* === RESTAURANT CARD === */
-
-.restaurant-card {
-  background: #ffffff;
-  border: none;
-  border-radius: 18px;
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  box-shadow: 0 2px 12px rgba(84, 107, 65, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
-  transition: var(--transition);
-}
-
-.restaurant-card.card-clickable {
-  cursor: pointer;
-}
-
-.card-main {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex: 1;
-  min-width: 0;
-}
-
-.card-body {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.card-body h3 {
-  font-size: 1rem;
-  letter-spacing: 0.3px;
-  color: var(--clr-dark);
-  font-weight: 700;
-}
-
-.card-body .card-notes {
-  font-size: 0.8rem;
-  color: var(--clr-text);
-  line-height: 1.4;
-  opacity: 0.75;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.card-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-top: 2px;
-}
+/* === SHARED PILLS (RestaurantCard.astro + restaurante.astro header) === */
 
 .dish-count-pill {
   display: inline-flex;
@@ -150,34 +94,8 @@
   border: solid 1px var(--clr-border);
   border-radius: 20px;
   padding: 2px 8px;
+  width: fit-content;
 }
-
-.card-actions {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.card-actions button {
-  font-size: 0.9rem;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border-radius: 50%;
-  letter-spacing: 0;
-  text-transform: none;
-  background: var(--clr-white2);
-  color: var(--clr-primary);
-  border-color: var(--clr-border);
-}
-
-.card-actions .btn-delete-restaurant {
-  color: #b02a3a;
-  background: #fce8ec;
-  border-color: #f0b8c0;
-}
-
-/* === PENDING TAG (pill) === */
 
 .pending-tag {
   display: inline-flex;
@@ -191,67 +109,6 @@
   border: solid 1px #99ad7a;
   border-radius: 20px;
   padding: 3px 10px;
-}
-
-/* === DISH CARD === */
-
-.dish-card {
-  background: #ffffff;
-  border: none;
-  border-radius: 14px;
-  padding: 14px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  box-shadow: 0 2px 10px rgba(84, 107, 65, 0.07), 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: var(--transition);
-}
-
-.dish-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.dish-info h4 {
-  font-size: 0.95rem;
-  letter-spacing: 0.3px;
-  color: var(--clr-dark);
-  font-weight: 600;
-}
-
-.dish-info .dish-notes {
-  font-size: 0.8rem;
-  color: var(--clr-text);
-  margin-top: 3px;
-  line-height: 1.4;
-  opacity: 0.75;
-}
-
-.dish-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.dish-actions button {
-  font-size: 0.9rem;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border-radius: 50%;
-  letter-spacing: 0;
-  text-transform: none;
-  background: var(--clr-white2);
-  color: var(--clr-primary);
-  border-color: var(--clr-border);
-}
-
-.dish-actions .btn-delete-dish {
-  color: #b02a3a;
-  background: #fce8ec;
-  border-color: #f0b8c0;
 }
 
 /* === RESTAURANT HEADER (detail page) === */
@@ -315,9 +172,9 @@
 
 .rh-name {
   font-size: 1.4rem;
+  font-weight: 800;
   letter-spacing: 0.5px;
   color: var(--clr-dark);
-  font-weight: 800;
 }
 
 .rh-notes {
@@ -437,35 +294,12 @@
 
 @media (hover: hover) {
 
-  .card-actions .btn-edit-restaurant:hover,
-  .dish-actions .btn-edit-dish:hover,
   .rh-actions .btn-edit-rh:hover {
     background: var(--clr-border);
   }
 
-  .card-actions .btn-delete-restaurant:hover,
-  .dish-actions .btn-delete-dish:hover,
   .rh-actions .btn-delete-rh:hover {
     background: #f0b8c0;
-  }
-
-  /* Botones de acción: sutiles por defecto, visibles al hover de la card */
-  .card-actions {
-    opacity: 0.4;
-    transition: opacity var(--transition);
-  }
-
-  .restaurant-card:hover .card-actions {
-    opacity: 1;
-  }
-
-  .restaurant-card.card-clickable:hover {
-    box-shadow: 0 6px 24px rgba(84, 107, 65, 0.18), 0 2px 6px rgba(0, 0, 0, 0.08);
-    transform: translateY(-2px);
-  }
-
-  .dish-card:hover {
-    box-shadow: 0 4px 16px rgba(84, 107, 65, 0.14), 0 1px 4px rgba(0, 0, 0, 0.07);
   }
 
   .fab:hover {
@@ -485,10 +319,6 @@
 @media (min-width: 768px) {
   .cards-grid {
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  .restaurant-card {
-    padding: 18px 20px;
   }
 
   .rh-card {

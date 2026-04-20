@@ -1,0 +1,85 @@
+---
+import type { Restaurant } from "../lib/data";
+import RatingBadge from "./RatingBadge.astro";
+
+interface Props {
+  restaurant: Restaurant;
+  avg: number | null;
+  dishCount: number;
+}
+
+const { restaurant: r, avg, dishCount } = Astro.props;
+const isPending = r.status === "pending";
+---
+
+<article
+  class="restaurant-card card-clickable"
+  data-href={`/restaurante?id=${r.id}`}
+  style={`view-transition-name: restaurant-${r.id}`}
+>
+  <div class="card-body">
+    <h3>{r.name}</h3>
+    {
+      isPending ? (
+        <span class="pending-tag">
+          <i class="bi bi-bookmark" /> Pendiente
+        </span>
+      ) : (
+        <span class="dish-count-pill">
+          <i class="bi bi-journal-text" /> {dishCount}{" "}
+          {dishCount === 1 ? "plato" : "platos"}
+        </span>
+      )
+    }
+  </div>
+  <RatingBadge score={avg} />
+</article>
+
+<style>
+  .restaurant-card {
+    background: #ffffff;
+    border: none;
+    border-radius: 18px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow:
+      0 2px 12px rgba(84, 107, 65, 0.08),
+      0 1px 3px rgba(0, 0, 0, 0.06);
+    transition: var(--transition);
+  }
+
+  .restaurant-card.card-clickable {
+    cursor: pointer;
+  }
+
+  .card-body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .card-body h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: var(--clr-dark);
+  }
+
+  @media (hover: hover) {
+    .restaurant-card.card-clickable:hover {
+      box-shadow:
+        0 6px 24px rgba(84, 107, 65, 0.18),
+        0 2px 6px rgba(0, 0, 0, 0.08);
+      transform: translateY(-2px);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .restaurant-card {
+      padding: 18px 20px;
+    }
+  }
+</style>

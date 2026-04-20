@@ -3,6 +3,10 @@ import Layout1 from "../layouts/Layout1.astro";
 import DishForm from "../components/DishForm.astro";
 import RestaurantForm from "../components/RestaurantForm.astro";
 import ConfirmDialog from "../components/ConfirmDialog.astro";
+import DishCard from "../components/DishCard.astro";
+import type { Dish } from "../lib/data";
+
+const tplDish: Dish = { id: "", restaurantId: "", name: "...", rating: 5, notes: " ", createdAt: "" };
 ---
 
 <Layout1 title="Restaurante · STAURANT">
@@ -37,6 +41,10 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
   <DishForm />
   <RestaurantForm />
   <ConfirmDialog />
+
+  <template id="tpl-dish-card">
+    <DishCard dish={tplDish} />
+  </template>
 </Layout1>
 
 <style>
@@ -123,7 +131,8 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     markAsVisited, markAsPending, escapeHtml,
   } from "../lib/data.ts";
   import type { Restaurant } from "../lib/data.ts";
-  import { renderDishCard, getRatingBadgeHTML, emit } from "../scripts/store.ts";
+  import { getRatingBadgeHTML, getRatingClass, emit } from "../scripts/store.ts";
+  import type { Dish } from "../lib/data.ts";
 
   // ─── Sort state (persiste en módulo entre navegaciones) ────────────────────
 
@@ -186,14 +195,45 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
       </div>`;
   }
 
-  function buildDishesHTML(sorted: ReturnType<typeof getDishesByRestaurant>): string {
-    if (sorted.length === 0) return `
-      <div class="empty-state">
-        <i class="bi bi-egg-fried"></i>
-        <p>Aún no hay platos registrados.</p>
-        <p class="empty-hint">Agrega el primer plato con el botón de arriba.</p>
-      </div>`;
-    return sorted.map(renderDishCard).join("");
+  function buildDishCardElement(d: Dish): Element {
+    const tpl = document.getElementById("tpl-dish-card") as HTMLTemplateElement;
+    const article = (tpl.content.cloneNode(true) as DocumentFragment).querySelector("article")!;
+    article.setAttribute("data-id", d.id);
+    article.querySelector("h4")!.textContent = d.name;
+    const notesEl = article.querySelector<HTMLElement>(".dish-notes");
+    if (d.notes) {
+      notesEl!.textContent = d.notes;
+    } else {
+      notesEl?.remove();
+    }
+    const badge = article.querySelector(".rating-badge")!;
+    badge.className = `rating-badge ${getRatingClass(d.rating)}`;
+    badge.innerHTML = `<span class="rating-num">${d.rating}</span>`;
+    article.querySelector<HTMLButtonElement>(".btn-edit-dish")!.addEventListener("click", () => {
+      (window as any).dishForm.open("edit", d.restaurantId, d);
+    });
+    article.querySelector<HTMLButtonElement>(".btn-delete-dish")!.addEventListener("click", () => {
+      (window as any).confirmDialog.show(
+        `¿Eliminar el plato "${d.name}"?`,
+        () => { deleteDish(d.id); emit("dish:deleted", d.id); }
+      );
+    });
+    return article;
+  }
+
+  function renderDishes(sorted: ReturnType<typeof getDishesByRestaurant>, dishesListEl: HTMLElement, sortBarEl: HTMLElement | null) {
+    if (sortBarEl) sortBarEl.hidden = sorted.length < 2;
+    if (sorted.length === 0) {
+      dishesListEl.innerHTML = `
+        <div class="empty-state">
+          <i class="bi bi-egg-fried"></i>
+          <p>Aún no hay platos registrados.</p>
+          <p class="empty-hint">Agrega el primer plato con el botón de arriba.</p>
+        </div>`;
+      return;
+    }
+    dishesListEl.innerHTML = "";
+    sorted.forEach(d => dishesListEl.appendChild(buildDishCardElement(d)));
   }
 
   // ─── Funciones de render y wiring a nivel de módulo ───────────────────────
@@ -213,26 +253,6 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     });
   }
 
-  function wireDishActions(dishes: ReturnType<typeof getDishesByRestaurant>) {
-    const dishesListEl = document.getElementById("dishes-list");
-    if (!dishesListEl || !currentRestaurant) return;
-    dishesListEl.querySelectorAll<HTMLButtonElement>(".btn-edit-dish").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const dish = dishes.find(d => d.id === btn.dataset.id);
-        if (dish) (window as any).dishForm.open("edit", currentRestaurant!.id, dish);
-      });
-    });
-    dishesListEl.querySelectorAll<HTMLButtonElement>(".btn-delete-dish").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const dish = dishes.find(d => d.id === btn.dataset.id);
-        (window as any).confirmDialog.show(
-          `¿Eliminar el plato "${dish?.name}"?`,
-          () => { deleteDish(btn.dataset.id!); emit("dish:deleted", btn.dataset.id); }
-        );
-      });
-    });
-  }
-
   function rerenderRestaurantePage() {
     const headerEl    = document.getElementById("restaurant-header");
     const dishesListEl = document.getElementById("dishes-list");
@@ -242,12 +262,9 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     const avg    = getRestaurantAverage(currentRestaurant.id);
     const sorted = sortDishes(getDishesByRestaurant(currentRestaurant.id));
 
-    headerEl.innerHTML    = buildHeaderHTML(currentRestaurant, avg);
-    if (sortBarEl) sortBarEl.hidden = sorted.length < 2;
-    dishesListEl.innerHTML = buildDishesHTML(sorted);
-
+    headerEl.innerHTML = buildHeaderHTML(currentRestaurant, avg);
     wireHeaderEvents();
-    if (sorted.length > 0) wireDishActions(sorted);
+    renderDishes(sorted, dishesListEl, sortBarEl);
   }
 
   // ─── Listeners permanentes a nivel de módulo ──────────────────────────────
@@ -315,10 +332,9 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
     const dishesListEl = document.getElementById("dishes-list");
     const sortBarEl    = document.querySelector<HTMLElement>(".sort-bar");
-    if (!dishesListEl || !sortBarEl) return;
+    if (!dishesListEl) return;
 
-    sortBarEl.hidden       = sorted.length < 2;
-    dishesListEl.innerHTML = buildDishesHTML(sorted);
+    renderDishes(sorted, dishesListEl, sortBarEl);
   });
 
   // ─── Init completo en astro:page-load ──────────────────────────────────────
