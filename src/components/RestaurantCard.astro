@@ -19,18 +19,12 @@ const isPending = r.status === "pending";
 >
   <div class="card-body">
     <h3>{r.name}</h3>
-    {
-      isPending ? (
-        <span class="pending-tag">
-          <i class="bi bi-bookmark" /> Pendiente
-        </span>
-      ) : (
-        <span class="dish-count-pill">
-          <i class="bi bi-journal-text" /> {dishCount}{" "}
-          {dishCount === 1 ? "plato" : "platos"}
-        </span>
-      )
-    }
+    {!isPending && (
+      <span class="dish-count-pill">
+        <i class="bi bi-journal-text" /> {dishCount}{" "}
+        {dishCount === 1 ? "plato" : "platos"}
+      </span>
+    )}
   </div>
   <RatingBadge score={avg} />
 </article>

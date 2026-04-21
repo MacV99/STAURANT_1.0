@@ -127,6 +127,7 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
 </style>
 
 <script>
+  import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
   import {
     initCache, isCacheLoaded,
@@ -210,7 +211,7 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
     div.querySelector<HTMLButtonElement>(".btn-delete-rh")!.addEventListener("click", () => {
       (window as any).confirmDialog.show(
         `¿Eliminar "${r.name}"? Se borrarán también sus platos.`,
-        () => { deleteRestaurant(r.id); window.location.href = "/"; }
+        () => { deleteRestaurant(r.id); navigate("/"); }
       );
     });
     return div;

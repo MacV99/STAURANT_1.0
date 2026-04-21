@@ -257,6 +257,7 @@ import Layout1 from "../layouts/Layout1.astro";
 </style>
 
 <script>
+  import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
 
   // Si ya hay sesión, ir directo al inicio
@@ -330,7 +331,7 @@ import Layout1 from "../layouts/Layout1.astro";
       btn.textContent = "Entrar";
       return;
     }
-    window.location.href = "/";
+    navigate("/");
   });
 
   // ─── Register ──────────────────────────────────────────────────────────────
@@ -361,6 +362,6 @@ import Layout1 from "../layouts/Layout1.astro";
       btn.textContent = "Crear cuenta";
       return;
     }
-    window.location.href = "/";
+    navigate("/");
   });
 </script>

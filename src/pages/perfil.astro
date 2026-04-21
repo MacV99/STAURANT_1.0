@@ -199,6 +199,7 @@ import Layout1 from "../layouts/Layout1.astro";
 </style>
 
 <script>
+  import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
   import { clearCache, initCache } from "../lib/data.ts";
 
@@ -307,7 +308,7 @@ import Layout1 from "../layouts/Layout1.astro";
     logoutBtn.onclick = async () => {
       clearCache();
       await supabase.auth.signOut();
-      window.location.href = "/login";
+      navigate("/login");
     };
   });
 </script>
