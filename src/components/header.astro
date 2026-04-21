@@ -5,7 +5,13 @@ import Navbar from "../components/navbar.astro";
 <header class="flex-row">
   <a href="/" class="logo-link"><img src="/img/logo2.png" alt="img-logo" /></a>
   <Navbar />
-  <a id="header-profile-btn" href="/perfil" class="profile-btn" aria-label="Perfil" hidden>
+  <a
+    id="header-profile-btn"
+    href="/perfil"
+    class="profile-btn"
+    aria-label="Perfil"
+    hidden
+  >
     <span id="header-avatar" class="profile-avatar-icon">
       <i class="bi bi-person-fill"></i>
     </span>
@@ -19,26 +25,37 @@ import Navbar from "../components/navbar.astro";
 
   // Pre-render inmediato desde caché (antes de la animación de ViewTransitions)
   document.addEventListener("astro:after-swap", () => {
-    const btn      = document.getElementById("header-profile-btn") as HTMLAnchorElement | null;
+    const btn = document.getElementById(
+      "header-profile-btn",
+    ) as HTMLAnchorElement | null;
     const avatarEl = document.getElementById("header-avatar");
     if (!btn || !avatarEl) return;
     try {
-      const cached = JSON.parse(localStorage.getItem(PROFILE_CACHE_KEY) ?? "null");
+      const cached = JSON.parse(
+        localStorage.getItem(PROFILE_CACHE_KEY) ?? "null",
+      );
       if (!cached) return;
       btn.hidden = false;
-      if (cached.name) avatarEl.textContent = cached.name.charAt(0).toUpperCase();
+      if (cached.name)
+        avatarEl.textContent = cached.name.charAt(0).toUpperCase();
       const currentTab = new URLSearchParams(window.location.search).get("tab");
       btn.href = currentTab ? `/perfil?from=${currentTab}` : "/perfil";
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   });
 
   // Re-inicializar en cada navegación para que los elementos sean del DOM actual
   document.addEventListener("astro:page-load", async () => {
-    const btn      = document.getElementById("header-profile-btn") as HTMLAnchorElement | null;
+    const btn = document.getElementById(
+      "header-profile-btn",
+    ) as HTMLAnchorElement | null;
     const avatarEl = document.getElementById("header-avatar");
     if (!btn || !avatarEl) return;
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) return;
 
     btn.hidden = false;
@@ -48,9 +65,16 @@ import Navbar from "../components/navbar.astro";
 
     // Leer avatar desde caché local (evita llamada a Supabase en cada navegación)
     try {
-      const cached = JSON.parse(localStorage.getItem(PROFILE_CACHE_KEY) ?? "null");
-      if (cached?.name) { avatarEl.textContent = cached.name.charAt(0).toUpperCase(); return; }
-    } catch { /* ignore */ }
+      const cached = JSON.parse(
+        localStorage.getItem(PROFILE_CACHE_KEY) ?? "null",
+      );
+      if (cached?.name) {
+        avatarEl.textContent = cached.name.charAt(0).toUpperCase();
+        return;
+      }
+    } catch {
+      /* ignore */
+    }
 
     // Primera vez o caché sin nombre: cargar desde Supabase
     const { data: profile } = await supabase
@@ -70,7 +94,7 @@ import Navbar from "../components/navbar.astro";
     justify-content: space-between;
     position: sticky;
     top: 10px;
-    background: rgba(255, 248, 236, 0.97);
+    background: var(--clr-white);
     box-shadow: 0 4px 20px rgba(84, 107, 65, 0.12);
     border: solid 1px rgba(220, 204, 172, 0.6);
     border-radius: 20px;
@@ -119,10 +143,6 @@ import Navbar from "../components/navbar.astro";
   }
 
   @media (hover: hover) {
-    header:hover {
-      background: rgba(255, 248, 236, 1);
-    }
-
     .profile-avatar-icon:hover {
       background: var(--clr-border);
     }
@@ -130,8 +150,6 @@ import Navbar from "../components/navbar.astro";
 
   @media (min-width: 768px) {
     header {
-      backdrop-filter: blur(8px);
-      background: rgba(255, 248, 236, 0.85);
       width: 98%;
     }
   }

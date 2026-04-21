@@ -39,12 +39,16 @@ export function renderRestaurantCard(
   `;
 }
 
-export function renderDishCard(d: Dish): string {
+export function renderDishCard(d: Dish, typeName?: string | null): string {
   const badge = getRatingBadgeHTML(d.rating);
+  const typeTag = typeName
+    ? `<span class="dish-type-tag">${escapeHtml(typeName)}</span>`
+    : "";
   return `
     <article class="dish-card" data-id="${d.id}">
       <div class="dish-info">
         <h4>${escapeHtml(d.name)}</h4>
+        ${typeTag}
         ${d.notes ? `<p class="dish-notes">${escapeHtml(d.notes)}</p>` : ""}
       </div>
       <div class="dish-actions">

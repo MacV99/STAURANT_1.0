@@ -8,7 +8,7 @@ import RestaurantHeader from "../components/RestaurantHeader.astro";
 import SortBar from "../components/SortBar.astro";
 import type { Dish, Restaurant } from "../lib/data";
 
-const tplDish: Dish = { id: "", restaurantId: "", name: "...", rating: 5, notes: " ", createdAt: "" };
+const tplDish: Dish = { id: "", restaurantId: "", typeId: null, name: "...", rating: 5, notes: " ", createdAt: "" };
 const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", notes: " ", createdAt: "" };
 ---
 
@@ -28,11 +28,28 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
         </button>
       </div>
 
-      <SortBar pills={[
-        { field: "rating", label: "Rating" },
-        { field: "name",   label: "Nombre" },
-        { field: "date",   label: "Fecha" },
-      ]} />
+      <div class="dish-search-wrap">
+        <i class="bi bi-search dish-search-icon"></i>
+        <input
+          id="dish-search"
+          class="dish-search-input"
+          type="search"
+          placeholder="Buscar plato..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <div class="dishes-controls">
+        <SortBar pills={[
+          { field: "rating", label: "Rating" },
+          { field: "name",   label: "Nombre" },
+          { field: "date",   label: "Fecha" },
+        ]} />
+        <select id="dish-type-select" class="dish-type-select" hidden>
+          <option value="">Todos los tipos</option>
+        </select>
+      </div>
 
       <div id="dishes-list"></div>
     </div>
@@ -43,7 +60,7 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
   <ConfirmDialog />
 
   <template id="tpl-dish-card">
-    <DishCard dish={tplDish} />
+    <DishCard dish={tplDish} typeName="..." />
   </template>
 
   <template id="tpl-restaurant-header">
@@ -107,6 +124,80 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
     color: var(--clr-dark);
   }
 
+  .dish-search-wrap {
+    position: relative;
+    width: 100%;
+  }
+
+  .dish-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--clr-text);
+    opacity: 0.4;
+    font-size: 0.85rem;
+    pointer-events: none;
+  }
+
+  .dish-search-input {
+    width: 100%;
+    padding: 9px 14px 9px 34px;
+    border-radius: var(--border-radius);
+    border: 1.5px solid var(--clr-border);
+    background: var(--clr-white);
+    font-size: 0.88rem;
+    color: var(--clr-dark);
+    transition: border-color var(--transition);
+  }
+
+  .dish-search-input::placeholder {
+    color: var(--clr-text);
+    opacity: 0.5;
+  }
+
+  .dish-search-input:focus {
+    outline: none;
+    border-color: var(--clr-primary);
+  }
+
+  .dish-search-input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+
+  .dishes-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .dish-type-select {
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: solid 1.5px var(--clr-border);
+    background: transparent;
+    color: var(--clr-text);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: var(--font-main);
+  }
+
+  .dish-type-select:focus {
+    outline: none;
+    border-color: var(--clr-primary);
+  }
+
+  .dish-type-select.has-value {
+    background: var(--clr-primary);
+    border-color: var(--clr-primary);
+    color: #ffffff;
+  }
+
   #dishes-list {
     display: flex;
     flex-direction: column;
@@ -133,7 +224,7 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
     initCache, isCacheLoaded,
     getRestaurants, getDishesByRestaurant,
     deleteDish, deleteRestaurant, getRestaurantAverage,
-    markAsVisited, markAsPending,
+    markAsVisited, markAsPending, getDishTypes,
   } from "../lib/data.ts";
   import type { Restaurant, Dish } from "../lib/data.ts";
   import { getRatingClass, emit } from "../scripts/store.ts";
@@ -169,10 +260,49 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
     });
   }
 
-  // ─── Restaurante activo (nivel de módulo) ──────────────────────────────────
-  // Actualizado en cada astro:page-load. Los listeners de módulo lo leen aquí.
+  function getFilteredSortedDishes(restaurantId: string): Dish[] {
+    let dishes = getDishesByRestaurant(restaurantId);
+    if (dishSearch) {
+      const q = dishSearch.toLowerCase();
+      dishes = dishes.filter(d =>
+        d.name.toLowerCase().includes(q) || d.notes.toLowerCase().includes(q)
+      );
+    }
+    if (dishTypeFilter) {
+      dishes = dishes.filter(d => d.typeId === dishTypeFilter);
+    }
+    return sortDishes(dishes);
+  }
+
+  function updateTypeSelect() {
+    const typeSelectEl = document.getElementById("dish-type-select") as HTMLSelectElement | null;
+    if (!typeSelectEl || !currentRestaurant) return;
+    const allDishes = getDishesByRestaurant(currentRestaurant.id);
+    const usedTypeIds = new Set(allDishes.map(d => d.typeId).filter((id): id is string => !!id));
+    const types = getDishTypes().filter(t => usedTypeIds.has(t.id));
+
+    const prev = typeSelectEl.value;
+    typeSelectEl.innerHTML = '<option value="">Todos los tipos</option>';
+    types.forEach(t => {
+      const opt = document.createElement("option");
+      opt.value = t.id;
+      opt.textContent = t.name;
+      typeSelectEl.appendChild(opt);
+    });
+    // Restaurar selección si sigue siendo válida
+    if (types.some(t => t.id === prev)) typeSelectEl.value = prev;
+    else { typeSelectEl.value = ""; dishTypeFilter = ""; }
+
+    typeSelectEl.hidden = types.length === 0;
+    typeSelectEl.classList.toggle("has-value", !!typeSelectEl.value);
+  }
+
+  // ─── Restaurante activo + filtros (nivel de módulo) ──────────────────────────
+  // Actualizados en cada astro:page-load. Los listeners de módulo los leen aquí.
 
   let currentRestaurant: Restaurant | undefined;
+  let dishSearch      = "";
+  let dishTypeFilter  = "";
 
   // ─── Generadores de HTML (nivel módulo) ────────────────────────────────────
 
@@ -222,6 +352,17 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
     const article = (tpl.content.cloneNode(true) as DocumentFragment).querySelector("article")!;
     article.setAttribute("data-id", d.id);
     article.querySelector("h4")!.textContent = d.name;
+    const typeTagEl = article.querySelector<HTMLElement>(".dish-type-tag");
+    if (d.typeId) {
+      const typeName = getDishTypes().find(t => t.id === d.typeId)?.name ?? null;
+      if (typeName && typeTagEl) {
+        typeTagEl.textContent = typeName;
+      } else {
+        typeTagEl?.remove();
+      }
+    } else {
+      typeTagEl?.remove();
+    }
     const notesEl = article.querySelector<HTMLElement>(".dish-notes");
     if (d.notes) {
       notesEl!.textContent = d.notes;
@@ -243,19 +384,29 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
     return article;
   }
 
-  function renderDishes(sorted: ReturnType<typeof getDishesByRestaurant>, dishesListEl: HTMLElement, sortBarEl: HTMLElement | null) {
-    if (sortBarEl) sortBarEl.hidden = sorted.length < 2;
-    if (sorted.length === 0) {
-      dishesListEl.innerHTML = `
-        <div class="empty-state">
-          <i class="bi bi-egg-fried"></i>
-          <p>Aún no hay platos registrados.</p>
-          <p class="empty-hint">Agrega el primer plato con el botón de arriba.</p>
-        </div>`;
+  function renderDishes(
+    filtered: Dish[],
+    totalCount: number,
+    dishesListEl: HTMLElement,
+    sortBarEl: HTMLElement | null
+  ) {
+    if (sortBarEl) sortBarEl.hidden = totalCount < 2;
+    if (filtered.length === 0) {
+      const isFiltering = !!dishSearch || !!dishTypeFilter;
+      dishesListEl.innerHTML = isFiltering
+        ? `<div class="empty-state">
+             <i class="bi bi-search"></i>
+             <p>Sin resultados para la búsqueda.</p>
+           </div>`
+        : `<div class="empty-state">
+             <i class="bi bi-egg-fried"></i>
+             <p>Aún no hay platos registrados.</p>
+             <p class="empty-hint">Agrega el primer plato con el botón de arriba.</p>
+           </div>`;
       return;
     }
     dishesListEl.innerHTML = "";
-    sorted.forEach(d => dishesListEl.appendChild(buildDishCardElement(d)));
+    filtered.forEach(d => dishesListEl.appendChild(buildDishCardElement(d)));
   }
 
   // ─── Funciones de render y wiring a nivel de módulo ───────────────────────
@@ -267,11 +418,13 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
     const sortBarEl    = document.querySelector<HTMLElement>(".sort-bar");
     if (!headerEl || !dishesListEl || !currentRestaurant) return;
 
-    const avg    = getRestaurantAverage(currentRestaurant.id);
-    const sorted = sortDishes(getDishesByRestaurant(currentRestaurant.id));
+    const avg      = getRestaurantAverage(currentRestaurant.id);
+    const filtered = getFilteredSortedDishes(currentRestaurant.id);
+    const total    = getDishesByRestaurant(currentRestaurant.id).length;
 
     headerEl.replaceChildren(buildHeaderElement(currentRestaurant, avg));
-    renderDishes(sorted, dishesListEl, sortBarEl);
+    renderDishes(filtered, total, dishesListEl, sortBarEl);
+    updateTypeSelect();
   }
 
   // ─── Listeners permanentes a nivel de módulo ──────────────────────────────
@@ -332,8 +485,9 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
     const restaurant = getRestaurants().find(r => r.id === id);
     if (!restaurant) return;
 
-    const avg    = getRestaurantAverage(restaurant.id);
-    const sorted = sortDishes(getDishesByRestaurant(restaurant.id));
+    const avg      = getRestaurantAverage(restaurant.id);
+    const filtered = getFilteredSortedDishes(restaurant.id);
+    const total    = getDishesByRestaurant(restaurant.id).length;
 
     headerEl.replaceChildren(buildHeaderElement(restaurant, avg));
 
@@ -341,7 +495,7 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
     const sortBarEl    = document.querySelector<HTMLElement>(".sort-bar");
     if (!dishesListEl) return;
 
-    renderDishes(sorted, dishesListEl, sortBarEl);
+    renderDishes(filtered, total, dishesListEl, sortBarEl);
   });
 
   // ─── Init completo en astro:page-load ──────────────────────────────────────
@@ -388,6 +542,34 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
 
     document.getElementById("btn-add-dish")!.onclick =
       () => (window as any).dishForm.open("create", currentRestaurant!.id);
+
+    // ─── Búsqueda de platos ───────────────────────────────────────────────────
+
+    const searchEl = document.getElementById("dish-search") as HTMLInputElement | null;
+    if (searchEl) {
+      searchEl.value = dishSearch;
+      searchEl.oninput = () => { dishSearch = searchEl.value; rerenderRestaurantePage(); };
+    }
+
+    // ─── Filtro por tipo ──────────────────────────────────────────────────────
+
+    const typeSelectEl = document.getElementById("dish-type-select") as HTMLSelectElement | null;
+    if (typeSelectEl) {
+      typeSelectEl.onchange = () => {
+        dishTypeFilter = typeSelectEl.value;
+        typeSelectEl.classList.toggle("has-value", !!dishTypeFilter);
+        rerenderRestaurantePage();
+      };
+    }
+
+    // ─── Fix botón Atrás del navegador ────────────────────────────────────────
+    // ViewTransitions no intercepta popstate en todos los casos; forzar navigate.
+
+    const onPopState = () => navigate(window.location.href);
+    window.addEventListener("popstate", onPopState);
+    document.addEventListener("astro:before-preparation", () => {
+      window.removeEventListener("popstate", onPopState);
+    }, { once: true });
 
     // ─── Render inicial con event wiring ─────────────────────────────────────
 

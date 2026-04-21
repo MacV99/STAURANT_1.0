@@ -2,7 +2,7 @@
   <div class="form-box">
     <div class="form-header">
       <h2 id="dish-form-title">Nuevo plato</h2>
-      <button id="dish-form-close" class="btn-close boton2" aria-label="Cerrar">
+      <button id="dish-form-close" class="btn-close boton" aria-label="Cerrar">
         <i class="bi bi-x-lg"></i>
       </button>
     </div>
@@ -10,9 +10,43 @@
     <form id="dish-form" novalidate>
       <input type="hidden" id="df-id" />
       <input type="hidden" id="df-restaurant-id" />
+      <input type="hidden" id="df-type-id" />
+
+      <div class="type-field">
+        <span class="label-text"
+          >Tipo de plato <span class="optional">(opcional)</span></span
+        >
+        <div class="type-combobox" id="df-type-combobox">
+          <div class="type-input-wrap">
+            <input
+              type="text"
+              id="df-type-search"
+              class="type-search-input"
+              placeholder="Selecciona una etiqueta"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button
+              type="button"
+              id="df-type-clear"
+              class="type-clear-btn"
+              hidden
+              aria-label="Quitar tipo"
+            >
+              <i class="bi bi-x-lg"></i>
+            </button>
+            <span class="type-chevron" aria-hidden="true"
+              ><i class="bi bi-chevron-down"></i></span
+            >
+          </div>
+          <div id="df-type-dropdown" class="type-dropdown" hidden></div>
+        </div>
+      </div>
 
       <label for="df-name">
-        <span class="label-text">Nombre del plato <span class="required">*</span></span>
+        <span class="label-text"
+          >Nombre del plato <span class="required">*</span></span
+        >
         <input
           type="text"
           id="df-name"
@@ -62,6 +96,8 @@
 </div>
 
 <style>
+  /* Elementos renderizados estáticamente en el template → scoped normal */
+
   .form-box {
     background: var(--clr-white);
     border: solid 1px var(--clr-border);
@@ -173,6 +209,109 @@
     flex-shrink: 0;
   }
 
+  /* ── Combobox de tipo — elementos estáticos ───────────────────────────── */
+
+  .type-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--clr-dark2);
+    text-transform: uppercase;
+  }
+
+  .type-combobox {
+    position: relative;
+  }
+
+  .type-input-wrap {
+    display: flex;
+    align-items: center;
+    border: 1.5px solid var(--clr-border);
+    border-radius: var(--border-radius);
+    background: white;
+    overflow: hidden;
+    transition: border-color 0.12s ease;
+  }
+
+  .type-input-wrap:focus-within {
+    border-color: var(--clr-primary);
+  }
+
+  .type-search-input {
+    flex: 1;
+    border: none !important;
+    background: transparent !important;
+    outline: none !important;
+    box-shadow: none !important;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    color: var(--clr-dark);
+    min-width: 0;
+  }
+
+  .type-search-input::placeholder {
+    text-transform: none;
+    color: var(--clr-text);
+    opacity: 0.5;
+    font-weight: 400;
+  }
+
+  .type-clear-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 6px;
+    color: var(--clr-text);
+    opacity: 0.5;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+    transition: opacity 0.12s ease;
+  }
+
+  .type-clear-btn:hover {
+    opacity: 1;
+  }
+
+  .type-chevron {
+    padding: 0 10px 0 4px;
+    color: var(--clr-text);
+    opacity: 0.4;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+    pointer-events: none;
+    transition: transform 0.15s ease;
+  }
+
+  .type-combobox.is-open .type-chevron {
+    transform: rotate(180deg);
+  }
+
+  .type-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1.5px solid var(--clr-border);
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    z-index: 200;
+    max-height: 220px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* ── Resto ──────────────────────────────────────────────────────────────── */
+
   .required {
     color: #e05050;
     font-weight: 700;
@@ -205,9 +344,87 @@
   }
 </style>
 
+<style is:inline>
+  /* Opciones del dropdown — creadas con document.createElement() en JS,
+     no reciben data-astro-cid-* → necesitan is:inline para no ser scoped */
+
+  .type-option {
+    padding: 12px 16px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--clr-dark);
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    transition: background 0.1s ease;
+    border-bottom: 1px solid var(--clr-border);
+  }
+
+  .type-option:last-child {
+    border-bottom: none;
+  }
+
+  .type-option:hover,
+  .type-option:focus {
+    background: var(--clr-white2);
+  }
+
+  .type-option.is-selected {
+    color: var(--clr-primary);
+    font-weight: 700;
+  }
+
+  .type-option.is-none {
+    color: var(--clr-text);
+    opacity: 0.55;
+    font-size: 0.82rem;
+    text-transform: none;
+    letter-spacing: 0;
+    border-bottom: 1px solid var(--clr-border);
+  }
+
+  .type-option.is-create {
+    color: var(--clr-primary);
+    font-weight: 600;
+    border-top: 1px solid var(--clr-border);
+    text-transform: none;
+    letter-spacing: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .type-option.is-create:hover {
+    background: var(--clr-white2);
+  }
+
+  .type-option.is-create .create-name {
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .type-option.is-empty {
+    color: var(--clr-text);
+    opacity: 0.5;
+    font-size: 0.82rem;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    cursor: default;
+    text-align: center;
+    padding: 14px;
+  }
+</style>
+
 <script>
   import type { Dish } from "../lib/data.ts";
-  import { createDish, updateDish, getDishesByRestaurant } from "../lib/data.ts";
+  import {
+    createDish,
+    updateDish,
+    getDishesByRestaurant,
+    getDishTypes,
+    createDishType,
+  } from "../lib/data.ts";
   import { emit } from "../scripts/store.ts";
 
   // Re-inicializar en cada navegación para que open/close siempre
@@ -217,17 +434,180 @@
     if (!overlayEl) return; // no está en esta página
     const overlay: HTMLElement = overlayEl;
 
-    const form              = document.getElementById("dish-form") as HTMLFormElement;
-    const titleEl           = document.getElementById("dish-form-title")!;
-    const idInput           = document.getElementById("df-id") as HTMLInputElement;
-    const restaurantIdInput = document.getElementById("df-restaurant-id") as HTMLInputElement;
-    const nameInput         = document.getElementById("df-name") as HTMLInputElement;
-    const ratingInput       = document.getElementById("df-rating") as HTMLInputElement;
-    const ratingValue       = document.getElementById("df-rating-value")!;
-    const notesInput        = document.getElementById("df-notes") as HTMLTextAreaElement;
-    const errorEl           = document.getElementById("df-error")!;
-    const closeBtn          = document.getElementById("dish-form-close")!;
-    const cancelBtn         = document.getElementById("dish-form-cancel")!;
+    const form = document.getElementById("dish-form") as HTMLFormElement;
+    const titleEl = document.getElementById("dish-form-title")!;
+    const idInput = document.getElementById("df-id") as HTMLInputElement;
+    const restaurantIdInput = document.getElementById(
+      "df-restaurant-id",
+    ) as HTMLInputElement;
+    const typeIdInput = document.getElementById(
+      "df-type-id",
+    ) as HTMLInputElement;
+    const nameInput = document.getElementById("df-name") as HTMLInputElement;
+    const ratingInput = document.getElementById(
+      "df-rating",
+    ) as HTMLInputElement;
+    const ratingValue = document.getElementById("df-rating-value")!;
+    const notesInput = document.getElementById(
+      "df-notes",
+    ) as HTMLTextAreaElement;
+    const errorEl = document.getElementById("df-error")!;
+    const closeBtn = document.getElementById("dish-form-close")!;
+    const cancelBtn = document.getElementById("dish-form-cancel")!;
+
+    // ─── Combobox de tipo ──────────────────────────────────────────────────────
+
+    const comboboxEl = document.getElementById("df-type-combobox")!;
+    const searchInput = document.getElementById(
+      "df-type-search",
+    ) as HTMLInputElement;
+    const clearBtn = document.getElementById(
+      "df-type-clear",
+    ) as HTMLButtonElement;
+    const dropdownEl = document.getElementById(
+      "df-type-dropdown",
+    ) as HTMLElement;
+
+    let selectedTypeId: string | null = null;
+
+    function openDropdown() {
+      renderDropdown(searchInput.value);
+      dropdownEl.hidden = false;
+      comboboxEl.classList.add("is-open");
+    }
+
+    function closeDropdown() {
+      dropdownEl.hidden = true;
+      comboboxEl.classList.remove("is-open");
+      // Restaurar el nombre del tipo seleccionado si el input quedó con texto parcial
+      if (selectedTypeId) {
+        const t = getDishTypes().find((t) => t.id === selectedTypeId);
+        searchInput.value = t?.name ?? "";
+      } else {
+        searchInput.value = "";
+      }
+    }
+
+    function selectType(id: string | null, name: string | null) {
+      selectedTypeId = id;
+      typeIdInput.value = id ?? "";
+      searchInput.value = name ?? "";
+      clearBtn.hidden = !id;
+      closeDropdown();
+    }
+
+    function renderDropdown(query: string) {
+      const types = getDishTypes();
+      const q = query.trim().toUpperCase();
+      const filtered = q ? types.filter((t) => t.name.includes(q)) : types;
+      const exactMatch = types.some((t) => t.name === q);
+
+      dropdownEl.innerHTML = "";
+
+      // Opción "ninguno" para deseleccionar (solo cuando hay algo seleccionado)
+      if (selectedTypeId) {
+        const noneOpt = document.createElement("div");
+        noneOpt.className = "type-option is-none";
+        noneOpt.textContent = "— Sin tipo";
+        noneOpt.addEventListener("mousedown", (e) => e.preventDefault());
+        noneOpt.addEventListener("click", () => selectType(null, null));
+        dropdownEl.appendChild(noneOpt);
+      }
+
+      // Opciones existentes
+      filtered.forEach((t) => {
+        const opt = document.createElement("div");
+        opt.className =
+          "type-option" + (t.id === selectedTypeId ? " is-selected" : "");
+        opt.textContent = t.name;
+        opt.addEventListener("mousedown", (e) => e.preventDefault());
+        opt.addEventListener("click", () => selectType(t.id, t.name));
+        dropdownEl.appendChild(opt);
+      });
+
+      // Opción para crear (solo si el texto no coincide exactamente)
+      if (q && !exactMatch) {
+        const createOpt = document.createElement("div");
+        createOpt.className = "type-option is-create";
+        createOpt.innerHTML = `<i class="bi bi-plus-lg" style="font-size:0.7rem;flex-shrink:0"></i> Crear "<span class="create-name">${q}</span>"`;
+        createOpt.addEventListener("mousedown", (e) => e.preventDefault());
+        createOpt.addEventListener("click", () => {
+          // Verificar que no exista ya (race condition)
+          const existing = getDishTypes().find((t) => t.name === q);
+          if (existing) {
+            selectType(existing.id, existing.name);
+          } else {
+            const newType = createDishType(q);
+            selectType(newType.id, newType.name);
+          }
+        });
+        dropdownEl.appendChild(createOpt);
+      }
+
+      // Estado vacío
+      if (dropdownEl.childElementCount === 0) {
+        const emptyOpt = document.createElement("div");
+        emptyOpt.className = "type-option is-empty";
+        emptyOpt.textContent = "Escribe para crear tu primera etiqueta";
+        dropdownEl.appendChild(emptyOpt);
+      }
+    }
+
+    // Input: filtra mientras escribe
+    searchInput.addEventListener("input", () => {
+      // Forzar UPPERCASE
+      const pos = searchInput.selectionStart;
+      searchInput.value = searchInput.value.toUpperCase();
+      searchInput.setSelectionRange(pos, pos);
+      // Limpiar selección actual si el usuario está escribiendo algo nuevo
+      selectedTypeId = null;
+      typeIdInput.value = "";
+      clearBtn.hidden = true;
+      if (dropdownEl.hidden) openDropdown();
+      else renderDropdown(searchInput.value);
+    });
+
+    // Abrir al hacer focus / click
+    searchInput.addEventListener("focus", () => {
+      if (dropdownEl.hidden) openDropdown();
+    });
+    searchInput.addEventListener("click", () => {
+      if (dropdownEl.hidden) openDropdown();
+    });
+
+    // Cerrar al perder foco (con delay para permitir el click en opciones)
+    searchInput.addEventListener("blur", () => {
+      setTimeout(() => {
+        if (!comboboxEl.contains(document.activeElement)) {
+          closeDropdown();
+        }
+      }, 150);
+    });
+
+    // Botón X para limpiar la selección (mousedown evita blur del input)
+    clearBtn.addEventListener("mousedown", (e) => e.preventDefault());
+    clearBtn.addEventListener("click", () => {
+      selectType(null, null);
+      searchInput.focus();
+    });
+
+    // Inicializa el combobox con un tipo pre-seleccionado (o sin selección)
+    function initTypeCombobox(selectedId: string | null) {
+      selectedTypeId = selectedId;
+      typeIdInput.value = selectedId ?? "";
+      dropdownEl.hidden = true;
+      comboboxEl.classList.remove("is-open");
+      if (selectedId) {
+        const t = getDishTypes().find((t) => t.id === selectedId);
+        searchInput.value = t?.name ?? "";
+        clearBtn.hidden = false;
+      } else {
+        searchInput.value = "";
+        clearBtn.hidden = true;
+      }
+    }
+
+    // ─── Apertura / cierre del modal ──────────────────────────────────────────
 
     function open(mode: "create" | "edit", restaurantId: string, data?: Dish) {
       errorEl.textContent = "";
@@ -243,9 +623,11 @@
         ratingInput.value = String(data.rating);
         ratingValue.textContent = String(data.rating);
         notesInput.value = data.notes;
+        initTypeCombobox(data.typeId ?? null);
       } else {
         titleEl.textContent = "Nuevo plato";
         idInput.value = "";
+        initTypeCombobox(null);
       }
 
       overlay.classList.add("is-open");
@@ -253,13 +635,16 @@
     }
 
     function close() {
+      closeDropdown();
       overlay.classList.remove("is-open");
     }
 
     // .onclick evita acumulación de listeners si el módulo re-ejecuta
-    closeBtn.onclick  = close;
+    closeBtn.onclick = close;
     cancelBtn.onclick = close;
-    overlay.onclick   = (e) => { if (e.target === overlay) close(); };
+    overlay.onclick = (e) => {
+      if (e.target === overlay) close();
+    };
 
     ratingInput.oninput = () => {
       ratingValue.textContent = ratingInput.value;
@@ -276,28 +661,42 @@
       errorEl.textContent = "";
 
       const name = nameInput.value.trim();
-      if (!name) { errorEl.textContent = "El nombre del plato es obligatorio."; nameInput.focus(); return; }
+      if (!name) {
+        errorEl.textContent = "El nombre del plato es obligatorio.";
+        nameInput.focus();
+        return;
+      }
 
       const restaurantId = restaurantIdInput.value;
       const id = idInput.value;
 
       const duplicate = getDishesByRestaurant(restaurantId).find(
-        (d) => d.name.trim().toLowerCase() === name.toLowerCase() && d.id !== id
+        (d) =>
+          d.name.trim().toLowerCase() === name.toLowerCase() && d.id !== id,
       );
-      if (duplicate) { errorEl.textContent = "Ya existe un plato con ese nombre en este restaurante."; nameInput.focus(); return; }
+      if (duplicate) {
+        errorEl.textContent =
+          "Ya existe un plato con ese nombre en este restaurante.";
+        nameInput.focus();
+        return;
+      }
 
       const rating = parseFloat(ratingInput.value);
       const notes = notesInput.value.trim();
+      const typeId = typeIdInput.value || null;
 
       // Cerrar ANTES de emitir: garantiza que el modal cierra aunque
       // el listener del evento lance una excepción.
       close();
 
       if (id) {
-        const updated = updateDish(id, { name, rating, notes });
+        const updated = updateDish(id, { name, rating, notes, typeId });
         if (updated) emit("dish:updated", updated);
       } else {
-        emit("dish:created", createDish({ restaurantId, name, rating, notes }));
+        emit(
+          "dish:created",
+          createDish({ restaurantId, typeId, name, rating, notes }),
+        );
       }
     };
 

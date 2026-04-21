@@ -2,16 +2,16 @@
 
 :root {
   /* COLORES - Ajusta según tu proyecto */
-  --clr-primary: #546b41;
+  --clr-primary: #30382a;
   --clr-primary-dark: #3d5030;
   --clr-dark: #353535;
   --clr-dark2: #333333;
-  --clr-white: #fff8ec;
-  --clr-white2: #ede8da;
+  --clr-white: #fffdfb;
+  --clr-white2: #f8f3e8;
 
   /* --clr-gray: #646464; */
   --clr-text: #363630;
-  --clr-border: #dcccac;
+  --clr-border: #dcccacaf;
 
   /* TIPOGRAFÍA */
   --font-main: "Montserrat", sans-serif;
@@ -235,11 +235,16 @@ input[type="file"] {
 /* === VIEW TRANSITIONS (animación suave entre páginas) === */
 
 @keyframes vt-slide-in {
-  from { opacity: 0; transform: translateY(7px); }
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
 }
 
 @keyframes vt-fade-out {
-  to { opacity: 0; }
+  to {
+    opacity: 0;
+  }
 }
 
 ::view-transition-old(root) {
