@@ -91,6 +91,11 @@ export async function initCache(userId: string): Promise<void> {
     dishes: (dRes.data ?? []).map(toDish),
     dishTypes: (dtRes.data ?? []).map(toDishType),
   });
+
+  // Tipos por defecto para usuarios nuevos (sin tipos todavía)
+  if ((dtRes.data ?? []).length === 0) {
+    ["HAMBURGUESA", "PERRO CALIENTE", "PIZZA"].forEach(name => createDishType(name));
+  }
 }
 
 /** Borra el caché local (llamar en logout). */
