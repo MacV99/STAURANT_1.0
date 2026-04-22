@@ -14,11 +14,13 @@ const { pills } = Astro.props;
 <div class="sort-bar">
   <span class="sort-label">Ordenar</span>
   <div class="sort-pills">
-    {pills.map(p => (
-      <button class="sort-pill" data-field={p.field}>
-        <i class="bi bi-arrow-down-up"></i> {p.label}
-      </button>
-    ))}
+    {
+      pills.map((p) => (
+        <button class="sort-pill" data-field={p.field}>
+          <i class="bi bi-arrow-down-up" /> {p.label}
+        </button>
+      ))
+    }
   </div>
 </div>
 
@@ -66,7 +68,7 @@ const { pills } = Astro.props;
   .sort-pill.active {
     background: var(--clr-primary);
     border-color: var(--clr-primary);
-    color: #ffffff;
+    color: var(--clr-white);
   }
 
   .sort-pill i {

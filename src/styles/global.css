@@ -4,13 +4,9 @@
   /* COLORES - Paleta minimalista blanco y negro */
   --clr-primary: #2e2e2e;
   --clr-primary-dark: #1A1A1A;
-  --clr-dark: #212121;
-  --clr-dark2: #636363;
-  --clr-white: #FFFFFF;
+  --clr-white: #ffffff;
   --clr-white2: #f7f7f7;
-
-  /* --clr-gray: #646464; */
-  --clr-text: #000000;
+  --clr-text: #2e2e2e;
   --clr-border: #e4e4e4;
   --clr-border2: #cecece;
 
@@ -19,7 +15,6 @@
 
   /* EFECTOS Y TIMING */
   --transition: 0.12s ease;
-  --border-radius: 12px;
 }
 
 /* === RESET BÁSICO === */

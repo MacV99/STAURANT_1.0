@@ -164,6 +164,70 @@
   border-color: #f0b8c0;
 }
 
+/* === DISH MENU POPUP === */
+
+.dish-menu {
+  position: relative;
+}
+
+.btn-menu {
+  font-size: 0.9rem;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+  background: var(--clr-white2);
+  color: var(--clr-primary);
+  border: solid 1px var(--clr-border);
+}
+
+.menu-popup {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--clr-white);
+  border: 1px solid var(--clr-border);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  min-width: 140px;
+  overflow: hidden;
+}
+
+.menu-popup.active {
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  color: var(--clr-text);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color var(--transition);
+  text-transform: none;
+  letter-spacing: 0;
+  width: 100%;
+  justify-content: flex-start;
+  font-family: var(--font-main);
+}
+
+.menu-item i {
+  font-size: 0.9rem;
+}
+
+.menu-item.btn-delete-dish {
+  color: #b02a3a;
+}
+
 /* === HOVER STATES === */
 
 @media (hover: hover) {
@@ -176,6 +240,18 @@
 
   .btn-danger:hover {
     background: #f0b8c0;
+  }
+
+  .btn-menu:hover {
+    background: var(--clr-border);
+  }
+
+  .menu-item:hover {
+    background: var(--clr-white2);
+  }
+
+  .menu-item.btn-delete-dish:hover {
+    background: #fce8ec;
   }
 }
 

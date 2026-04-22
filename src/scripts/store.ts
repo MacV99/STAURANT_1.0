@@ -53,12 +53,21 @@ export function renderDishCard(d: Dish, typeName?: string | null): string {
       </div>
       <div class="dish-actions">
         ${badge}
-        <button class="btn-edit-dish boton2" data-id="${d.id}">
-          <i class="bi bi-pencil"></i>
-        </button>
-        <button class="btn-delete-dish boton2" data-id="${d.id}">
-          <i class="bi bi-trash"></i>
-        </button>
+        <div class="dish-menu">
+          <button class="btn-menu boton2" data-id="${d.id}">
+            <i class="bi bi-three-dots-vertical"></i>
+          </button>
+          <div class="menu-popup">
+            <button class="menu-item btn-edit-dish" data-id="${d.id}">
+              <i class="bi bi-pencil"></i>
+              <span>Editar</span>
+            </button>
+            <button class="menu-item btn-delete-dish" data-id="${d.id}">
+              <i class="bi bi-trash"></i>
+              <span>Eliminar</span>
+            </button>
+          </div>
+        </div>
       </div>
     </article>
   `;

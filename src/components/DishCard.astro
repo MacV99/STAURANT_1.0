@@ -18,18 +18,27 @@ const { dish: d, typeName } = Astro.props;
   </div>
   <div class="dish-actions">
     <RatingBadge score={d.rating} />
-    <button class="btn-edit-dish boton2" data-id={d.id}>
-      <i class="bi bi-pencil"></i>
-    </button>
-    <button class="btn-delete-dish boton2" data-id={d.id}>
-      <i class="bi bi-trash"></i>
-    </button>
+    <div class="dish-menu">
+      <button class="btn-menu boton2" data-id={d.id}>
+        <i class="bi bi-three-dots-vertical"></i>
+      </button>
+      <div class="menu-popup">
+        <button class="menu-item btn-edit-dish" data-id={d.id}>
+          <i class="bi bi-pencil"></i>
+          <span>Editar</span>
+        </button>
+        <button class="menu-item btn-delete-dish" data-id={d.id}>
+          <i class="bi bi-trash"></i>
+          <span>Eliminar</span>
+        </button>
+      </div>
+    </div>
   </div>
 </article>
 
 <style>
   .dish-card {
-    background: #ffffff;
+    background: var(--clr-white);
     border: 1px solid var(--clr-border);
     border-radius: 14px;
     padding: 14px 16px;
@@ -46,10 +55,10 @@ const { dish: d, typeName } = Astro.props;
   }
 
   .dish-info h4 {
-    font-size: 0.95rem;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    color: var(--clr-dark);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--clr-text);
   }
 
   .dish-type-tag {
@@ -81,7 +90,11 @@ const { dish: d, typeName } = Astro.props;
     flex-shrink: 0;
   }
 
-  .dish-actions button {
+  .dish-menu {
+    position: relative;
+  }
+
+  .btn-menu {
     font-size: 0.9rem;
     width: 40px;
     height: 40px;
@@ -91,26 +104,99 @@ const { dish: d, typeName } = Astro.props;
     text-transform: none;
     background: var(--clr-white2);
     color: var(--clr-primary);
-    border-color: var(--clr-border);
+    border: solid 1px var(--clr-border);
   }
 
-  .dish-actions .btn-delete-dish {
+  .menu-popup {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background: var(--clr-white);
+    border: 1px solid var(--clr-border);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    min-width: 140px;
+    overflow: hidden;
+  }
+
+  .menu-popup.active {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: transparent;
+    border: none;
+    color: var(--clr-text);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color var(--transition);
+    text-transform: none;
+    letter-spacing: 0;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .menu-item i {
+    font-size: 0.9rem;
+  }
+
+  .menu-item.btn-delete-dish {
     color: #b02a3a;
-    background: #fce8ec;
-    border-color: #f0b8c0;
   }
 
   @media (hover: hover) {
-    .dish-card:hover {
-      border-color: var(--clr-border2);
-    }
-
-    .dish-actions .btn-edit-dish:hover {
+    .btn-menu:hover {
       background: var(--clr-border);
     }
 
-    .dish-actions .btn-delete-dish:hover {
-      background: #f0b8c0;
+    .menu-item:hover {
+      background: var(--clr-white2);
+    }
+
+    .menu-item.btn-delete-dish:hover {
+      background: #fce8ec;
     }
   }
 </style>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const menuButtons = document.querySelectorAll(".btn-menu");
+
+    menuButtons.forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const popup = (btn as HTMLElement).parentElement?.querySelector(
+          ".menu-popup",
+        ) as HTMLElement;
+        if (popup) {
+          // Cerrar otros menús abiertos
+          document.querySelectorAll(".menu-popup.active").forEach((m) => {
+            if (m !== popup) {
+              m.classList.remove("active");
+            }
+          });
+          // Toggle menú actual
+          popup.classList.toggle("active");
+        }
+      });
+    });
+
+    // Cerrar menú al hacer click fuera
+    document.addEventListener("click", (e) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(".dish-menu")) {
+        document.querySelectorAll(".menu-popup.active").forEach((popup) => {
+          popup.classList.remove("active");
+        });
+      }
+    });
+  });
+</script>

@@ -128,7 +128,7 @@ const tplRestaurant: Restaurant = {
     text-transform: none;
     letter-spacing: 0.5px;
     background: var(--clr-primary);
-    color: white;
+    color: var(--clr-white);
     border-color: var(--clr-primary);
     font-size: 0.85rem;
     padding: 9px 16px;
@@ -211,7 +211,7 @@ const tplRestaurant: Restaurant = {
   .dish-type-select.has-value {
     background: var(--clr-primary);
     border-color: var(--clr-primary);
-    color: #ffffff;
+    color: var(--clr-white);
   }
 
   #dishes-list {
@@ -419,10 +419,41 @@ const tplRestaurant: Restaurant = {
     const badge = article.querySelector(".rating-badge")!;
     badge.className = `rating-badge ${getRatingClass(d.rating)}`;
     badge.innerHTML = `<span class="rating-num">${d.rating}</span>`;
+
+    // ─── Setup menú popup ─────────────────────────────────────────────────────
+    const btnMenu = article.querySelector<HTMLButtonElement>(".btn-menu")!;
+    const menuPopup = article.querySelector<HTMLElement>(".menu-popup")!;
+
+    btnMenu.addEventListener("click", (e) => {
+      e.stopPropagation();
+      // Cerrar otros menús abiertos
+      document.querySelectorAll(".menu-popup.active").forEach((m) => {
+        if (m !== menuPopup) {
+          m.classList.remove("active");
+        }
+      });
+      // Toggle menú actual
+      menuPopup.classList.toggle("active");
+    });
+
+    // Cerrar menú al hacer click fuera
+    const closeMenuOnClickOutside = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(".dish-menu")) {
+        document.querySelectorAll(".menu-popup.active").forEach((popup) => {
+          popup.classList.remove("active");
+        });
+      }
+    };
+    document.addEventListener("click", closeMenuOnClickOutside);
+
+    // ─────────────────────────────────────────────────────────────────────────
+
     article
       .querySelector<HTMLButtonElement>(".btn-edit-dish")!
       .addEventListener("click", () => {
         (window as any).dishForm.open("edit", d.restaurantId, d);
+        menuPopup.classList.remove("active");
       });
     article
       .querySelector<HTMLButtonElement>(".btn-delete-dish")!
@@ -434,6 +465,7 @@ const tplRestaurant: Restaurant = {
             emit("dish:deleted", d.id);
           },
         );
+        menuPopup.classList.remove("active");
       });
     return article;
   }
