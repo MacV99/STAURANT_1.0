@@ -8,7 +8,7 @@
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(6px);
   z-index: 200;
   align-items: center;
@@ -104,9 +104,9 @@
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.5px;
-  color: #B24BA8;
-  background: #F5E8F5;
-  border: solid 1px #E0C0E0;
+  color: #000000;
+  background: #F5F5F5;
+  border: solid 1px #D0D0D0;
   border-radius: 20px;
   padding: 3px 10px;
 }
@@ -153,7 +153,6 @@
   border-color: var(--clr-primary);
   font-size: 1.5rem;
   letter-spacing: 0;
-  box-shadow: 0 4px 12px rgba(178, 75, 168, 0.25);
   z-index: 150;
 }
 
@@ -172,7 +171,6 @@
   .fab:hover {
     background: var(--clr-primary-dark);
     border-color: var(--clr-primary-dark);
-    box-shadow: 0 6px 16px rgba(178, 75, 168, 0.35);
     transform: scale(1.05);
   }
 

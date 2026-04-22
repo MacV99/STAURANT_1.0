@@ -32,16 +32,13 @@ const isPending = r.status === "pending";
 <style>
   .restaurant-card {
     background: #ffffff;
-    border: none;
+    border: 1px solid #D0D0D0;
     border-radius: 18px;
     padding: 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    box-shadow:
-      0 2px 12px rgba(84, 107, 65, 0.08),
-      0 1px 3px rgba(0, 0, 0, 0.06);
     transition: var(--transition);
   }
 
@@ -64,10 +61,7 @@ const isPending = r.status === "pending";
 
   @media (hover: hover) {
     .restaurant-card.card-clickable:hover {
-      box-shadow:
-        0 6px 24px rgba(84, 107, 65, 0.18),
-        0 2px 6px rgba(0, 0, 0, 0.08);
-      transform: translateY(-2px);
+      border-color: #000000;
     }
   }
 

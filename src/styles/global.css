@@ -1,17 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 
 :root {
-  /* COLORES - Paleta minimalista púrpura */
-  --clr-primary: #B24BA8;
-  --clr-primary-dark: #A03A98;
-  --clr-dark: #2A2A2A;
-  --clr-dark2: #1A1A1A;
+  /* COLORES - Paleta minimalista blanco y negro */
+  --clr-primary: #000000;
+  --clr-primary-dark: #1A1A1A;
+  --clr-dark: #000000;
+  --clr-dark2: #000000;
   --clr-white: #FFFFFF;
-  --clr-white2: #F8F8F8;
+  --clr-white2: #F5F5F5;
 
   /* --clr-gray: #646464; */
-  --clr-text: #333333;
-  --clr-border: #E0E0E0;
+  --clr-text: #000000;
+  --clr-border: #D0D0D0;
 
   /* TIPOGRAFÍA */
   --font-main: "Montserrat", sans-serif;
@@ -40,7 +40,7 @@ html {
 /* === SCROLLBAR === */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(178, 75, 168, 0.3) transparent;
+  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
 }
 
 ::-webkit-scrollbar {
@@ -53,12 +53,12 @@ html {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(178, 75, 168, 0.3);
+  background: rgba(0, 0, 0, 0.3);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(178, 75, 168, 0.5);
+  background: rgba(0, 0, 0, 0.5);
 }
 
 /* === BODY === */
