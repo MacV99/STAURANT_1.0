@@ -8,8 +8,22 @@ import RestaurantHeader from "../components/RestaurantHeader.astro";
 import SortBar from "../components/SortBar.astro";
 import type { Dish, Restaurant } from "../lib/data";
 
-const tplDish: Dish = { id: "", restaurantId: "", typeId: null, name: "...", rating: 5, notes: " ", createdAt: "" };
-const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", notes: " ", createdAt: "" };
+const tplDish: Dish = {
+  id: "",
+  restaurantId: "",
+  typeId: null,
+  name: "...",
+  rating: 5,
+  notes: " ",
+  createdAt: "",
+};
+const tplRestaurant: Restaurant = {
+  id: "",
+  name: "...",
+  status: "visited",
+  notes: " ",
+  createdAt: "",
+};
 ---
 
 <Layout1 title="Restaurante · STAURANT">
@@ -41,11 +55,13 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
       </div>
 
       <div class="dishes-controls">
-        <SortBar pills={[
-          { field: "rating", label: "Rating" },
-          { field: "name",   label: "Nombre" },
-          { field: "date",   label: "Fecha" },
-        ]} />
+        <SortBar
+          pills={[
+            { field: "rating", label: "Rating" },
+            { field: "name", label: "Nombre" },
+            { field: "date", label: "Fecha" },
+          ]}
+        />
         <select id="dish-type-select" class="dish-type-select" hidden>
           <option value="">Todos los tipos</option>
         </select>
@@ -158,7 +174,7 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
 
   .dish-search-input:focus {
     outline: none;
-    border-color: var(--clr-primary);
+    border-color: var(--clr-border2);
   }
 
   .dish-search-input::-webkit-search-cancel-button {
@@ -189,7 +205,7 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
 
   .dish-type-select:focus {
     outline: none;
-    border-color: var(--clr-primary);
+    border-color: var(--clr-border2);
   }
 
   .dish-type-select.has-value {
@@ -221,10 +237,16 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
   import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
   import {
-    initCache, isCacheLoaded,
-    getRestaurants, getDishesByRestaurant,
-    deleteDish, deleteRestaurant, getRestaurantAverage,
-    markAsVisited, markAsPending, getDishTypes,
+    initCache,
+    isCacheLoaded,
+    getRestaurants,
+    getDishesByRestaurant,
+    deleteDish,
+    deleteRestaurant,
+    getRestaurantAverage,
+    markAsVisited,
+    markAsPending,
+    getDishTypes,
   } from "../lib/data.ts";
   import type { Restaurant, Dish } from "../lib/data.ts";
   import { getRatingClass, emit } from "../scripts/store.ts";
@@ -232,7 +254,7 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
   // ─── Sort state (persiste en módulo entre navegaciones) ────────────────────
 
   type SortField = "name" | "rating" | "date";
-  type SortDir   = "asc" | "desc";
+  type SortDir = "asc" | "desc";
   const SORT_KEY = "staurant_sort_d";
 
   function getSortState(): { field: SortField; dir: SortDir } {
@@ -240,10 +262,11 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
       const saved = JSON.parse(localStorage.getItem(SORT_KEY) ?? "{}");
       return {
         field: (saved.field as SortField) ?? "rating",
-        dir:   (saved.dir   as SortDir)   ?? "desc",
+        dir: (saved.dir as SortDir) ?? "desc",
       };
+    } catch {
+      return { field: "rating", dir: "desc" };
     }
-    catch { return { field: "rating", dir: "desc" }; }
   }
   function setSortState(s: { field: SortField; dir: SortDir }) {
     localStorage.setItem(SORT_KEY, JSON.stringify(s));
@@ -253,9 +276,10 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
   function sortDishes(dishes: ReturnType<typeof getDishesByRestaurant>) {
     return [...dishes].sort((a, b) => {
       let cmp = 0;
-      if (dishSort.field === "name")        cmp = a.name.localeCompare(b.name);
+      if (dishSort.field === "name") cmp = a.name.localeCompare(b.name);
       else if (dishSort.field === "rating") cmp = a.rating - b.rating;
-      else cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      else
+        cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       return dishSort.dir === "asc" ? cmp : -cmp;
     });
   }
@@ -264,34 +288,42 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
     let dishes = getDishesByRestaurant(restaurantId);
     if (dishSearch) {
       const q = dishSearch.toLowerCase();
-      dishes = dishes.filter(d =>
-        d.name.toLowerCase().includes(q) || d.notes.toLowerCase().includes(q)
+      dishes = dishes.filter(
+        (d) =>
+          d.name.toLowerCase().includes(q) || d.notes.toLowerCase().includes(q),
       );
     }
     if (dishTypeFilter) {
-      dishes = dishes.filter(d => d.typeId === dishTypeFilter);
+      dishes = dishes.filter((d) => d.typeId === dishTypeFilter);
     }
     return sortDishes(dishes);
   }
 
   function updateTypeSelect() {
-    const typeSelectEl = document.getElementById("dish-type-select") as HTMLSelectElement | null;
+    const typeSelectEl = document.getElementById(
+      "dish-type-select",
+    ) as HTMLSelectElement | null;
     if (!typeSelectEl || !currentRestaurant) return;
     const allDishes = getDishesByRestaurant(currentRestaurant.id);
-    const usedTypeIds = new Set(allDishes.map(d => d.typeId).filter((id): id is string => !!id));
-    const types = getDishTypes().filter(t => usedTypeIds.has(t.id));
+    const usedTypeIds = new Set(
+      allDishes.map((d) => d.typeId).filter((id): id is string => !!id),
+    );
+    const types = getDishTypes().filter((t) => usedTypeIds.has(t.id));
 
     const prev = typeSelectEl.value;
     typeSelectEl.innerHTML = '<option value="">Todos los tipos</option>';
-    types.forEach(t => {
+    types.forEach((t) => {
       const opt = document.createElement("option");
       opt.value = t.id;
       opt.textContent = t.name;
       typeSelectEl.appendChild(opt);
     });
     // Restaurar selección si sigue siendo válida
-    if (types.some(t => t.id === prev)) typeSelectEl.value = prev;
-    else { typeSelectEl.value = ""; dishTypeFilter = ""; }
+    if (types.some((t) => t.id === prev)) typeSelectEl.value = prev;
+    else {
+      typeSelectEl.value = "";
+      dishTypeFilter = "";
+    }
 
     typeSelectEl.hidden = types.length === 0;
     typeSelectEl.classList.toggle("has-value", !!typeSelectEl.value);
@@ -301,14 +333,18 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
   // Actualizados en cada astro:page-load. Los listeners de módulo los leen aquí.
 
   let currentRestaurant: Restaurant | undefined;
-  let dishSearch      = "";
-  let dishTypeFilter  = "";
+  let dishSearch = "";
+  let dishTypeFilter = "";
 
   // ─── Generadores de HTML (nivel módulo) ────────────────────────────────────
 
   function buildHeaderElement(r: Restaurant, avg: number | null): Element {
-    const tpl = document.getElementById("tpl-restaurant-header") as HTMLTemplateElement;
-    const div = (tpl.content.cloneNode(true) as DocumentFragment).querySelector(".rh-card")!;
+    const tpl = document.getElementById(
+      "tpl-restaurant-header",
+    ) as HTMLTemplateElement;
+    const div = (tpl.content.cloneNode(true) as DocumentFragment).querySelector(
+      ".rh-card",
+    )!;
     div.setAttribute("style", `view-transition-name: restaurant-${r.id}`);
     div.querySelector("h1")!.textContent = r.name;
     const dishes = getDishesByRestaurant(r.id);
@@ -319,7 +355,8 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
       pendingSpan.innerHTML = '<i class="bi bi-bookmark"></i> Pendiente';
       pill?.replaceWith(pendingSpan);
     } else {
-      if (pill) pill.innerHTML = `<i class="bi bi-journal-text"></i> ${dishes.length} ${dishes.length === 1 ? "plato" : "platos"}`;
+      if (pill)
+        pill.innerHTML = `<i class="bi bi-journal-text"></i> ${dishes.length} ${dishes.length === 1 ? "plato" : "platos"}`;
     }
     const badge = div.querySelector(".rating-badge")!;
     if (avg === null) {
@@ -335,26 +372,36 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
     } else {
       notesEl?.remove();
     }
-    div.querySelector<HTMLButtonElement>(".btn-edit-rh")!.addEventListener("click", () => {
-      (window as any).restaurantForm.open("edit", r);
-    });
-    div.querySelector<HTMLButtonElement>(".btn-delete-rh")!.addEventListener("click", () => {
-      (window as any).confirmDialog.show(
-        `¿Eliminar "${r.name}"? Se borrarán también sus platos.`,
-        () => { deleteRestaurant(r.id); navigate("/"); }
-      );
-    });
+    div
+      .querySelector<HTMLButtonElement>(".btn-edit-rh")!
+      .addEventListener("click", () => {
+        (window as any).restaurantForm.open("edit", r);
+      });
+    div
+      .querySelector<HTMLButtonElement>(".btn-delete-rh")!
+      .addEventListener("click", () => {
+        (window as any).confirmDialog.show(
+          `¿Eliminar "${r.name}"? Se borrarán también sus platos.`,
+          () => {
+            deleteRestaurant(r.id);
+            navigate("/");
+          },
+        );
+      });
     return div;
   }
 
   function buildDishCardElement(d: Dish): Element {
     const tpl = document.getElementById("tpl-dish-card") as HTMLTemplateElement;
-    const article = (tpl.content.cloneNode(true) as DocumentFragment).querySelector("article")!;
+    const article = (
+      tpl.content.cloneNode(true) as DocumentFragment
+    ).querySelector("article")!;
     article.setAttribute("data-id", d.id);
     article.querySelector("h4")!.textContent = d.name;
     const typeTagEl = article.querySelector<HTMLElement>(".dish-type-tag");
     if (d.typeId) {
-      const typeName = getDishTypes().find(t => t.id === d.typeId)?.name ?? null;
+      const typeName =
+        getDishTypes().find((t) => t.id === d.typeId)?.name ?? null;
       if (typeName && typeTagEl) {
         typeTagEl.textContent = typeName;
       } else {
@@ -372,15 +419,22 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
     const badge = article.querySelector(".rating-badge")!;
     badge.className = `rating-badge ${getRatingClass(d.rating)}`;
     badge.innerHTML = `<span class="rating-num">${d.rating}</span>`;
-    article.querySelector<HTMLButtonElement>(".btn-edit-dish")!.addEventListener("click", () => {
-      (window as any).dishForm.open("edit", d.restaurantId, d);
-    });
-    article.querySelector<HTMLButtonElement>(".btn-delete-dish")!.addEventListener("click", () => {
-      (window as any).confirmDialog.show(
-        `¿Eliminar el plato "${d.name}"?`,
-        () => { deleteDish(d.id); emit("dish:deleted", d.id); }
-      );
-    });
+    article
+      .querySelector<HTMLButtonElement>(".btn-edit-dish")!
+      .addEventListener("click", () => {
+        (window as any).dishForm.open("edit", d.restaurantId, d);
+      });
+    article
+      .querySelector<HTMLButtonElement>(".btn-delete-dish")!
+      .addEventListener("click", () => {
+        (window as any).confirmDialog.show(
+          `¿Eliminar el plato "${d.name}"?`,
+          () => {
+            deleteDish(d.id);
+            emit("dish:deleted", d.id);
+          },
+        );
+      });
     return article;
   }
 
@@ -388,7 +442,7 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
     filtered: Dish[],
     totalCount: number,
     dishesListEl: HTMLElement,
-    sortBarEl: HTMLElement | null
+    sortBarEl: HTMLElement | null,
   ) {
     if (sortBarEl) sortBarEl.hidden = totalCount < 2;
     if (filtered.length === 0) {
@@ -406,21 +460,21 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
       return;
     }
     dishesListEl.innerHTML = "";
-    filtered.forEach(d => dishesListEl.appendChild(buildDishCardElement(d)));
+    filtered.forEach((d) => dishesListEl.appendChild(buildDishCardElement(d)));
   }
 
   // ─── Funciones de render y wiring a nivel de módulo ───────────────────────
   // Consultan el DOM en cada llamada → inocuas en páginas sin estos elementos.
 
   function rerenderRestaurantePage() {
-    const headerEl     = document.getElementById("restaurant-header");
+    const headerEl = document.getElementById("restaurant-header");
     const dishesListEl = document.getElementById("dishes-list");
-    const sortBarEl    = document.querySelector<HTMLElement>(".sort-bar");
+    const sortBarEl = document.querySelector<HTMLElement>(".sort-bar");
     if (!headerEl || !dishesListEl || !currentRestaurant) return;
 
-    const avg      = getRestaurantAverage(currentRestaurant.id);
+    const avg = getRestaurantAverage(currentRestaurant.id);
     const filtered = getFilteredSortedDishes(currentRestaurant.id);
-    const total    = getDishesByRestaurant(currentRestaurant.id).length;
+    const total = getDishesByRestaurant(currentRestaurant.id).length;
 
     headerEl.replaceChildren(buildHeaderElement(currentRestaurant, avg));
     renderDishes(filtered, total, dishesListEl, sortBarEl);
@@ -437,7 +491,9 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
         if (updated) {
           currentRestaurant = updated;
           // Actualizar backLink para que "Volver" lleve a visitados
-          const bl = document.getElementById("back-link") as HTMLAnchorElement | null;
+          const bl = document.getElementById(
+            "back-link",
+          ) as HTMLAnchorElement | null;
           if (bl) bl.href = "/?tab=visitados";
           emit("restaurant:visited", updated);
         }
@@ -448,7 +504,7 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
     rerenderRestaurantePage();
   });
 
-  document.addEventListener("dish:updated",  () => rerenderRestaurantePage());
+  document.addEventListener("dish:updated", () => rerenderRestaurantePage());
   document.addEventListener("dish:deleted", () => {
     if (currentRestaurant?.status === "visited") {
       const remaining = getDishesByRestaurant(currentRestaurant.id);
@@ -456,7 +512,9 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
         const updated = markAsPending(currentRestaurant.id);
         if (updated) {
           currentRestaurant = updated;
-          const bl = document.getElementById("back-link") as HTMLAnchorElement | null;
+          const bl = document.getElementById(
+            "back-link",
+          ) as HTMLAnchorElement | null;
           if (bl) bl.href = "/?tab=pendientes";
           emit("restaurant:updated", updated);
         }
@@ -482,17 +540,17 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
     if (!headerEl || !isCacheLoaded()) return;
 
     const id = new URLSearchParams(window.location.search).get("id") ?? "";
-    const restaurant = getRestaurants().find(r => r.id === id);
+    const restaurant = getRestaurants().find((r) => r.id === id);
     if (!restaurant) return;
 
-    const avg      = getRestaurantAverage(restaurant.id);
+    const avg = getRestaurantAverage(restaurant.id);
     const filtered = getFilteredSortedDishes(restaurant.id);
-    const total    = getDishesByRestaurant(restaurant.id).length;
+    const total = getDishesByRestaurant(restaurant.id).length;
 
     headerEl.replaceChildren(buildHeaderElement(restaurant, avg));
 
     const dishesListEl = document.getElementById("dishes-list");
-    const sortBarEl    = document.querySelector<HTMLElement>(".sort-bar");
+    const sortBarEl = document.querySelector<HTMLElement>(".sort-bar");
     if (!dishesListEl) return;
 
     renderDishes(filtered, total, dishesListEl, sortBarEl);
@@ -504,56 +562,80 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
     const headerEl = document.getElementById("restaurant-header");
     if (!headerEl) return;
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { window.location.href = "/login"; return; }
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      window.location.href = "/login";
+      return;
+    }
     await initCache(session.user.id);
 
     const id = new URLSearchParams(window.location.search).get("id") ?? "";
-    currentRestaurant = getRestaurants().find(r => r.id === id);
+    currentRestaurant = getRestaurants().find((r) => r.id === id);
 
     const backLink = document.getElementById("back-link") as HTMLAnchorElement;
-    if (backLink) backLink.href = `/?tab=${currentRestaurant?.status === "pending" ? "pendientes" : "visitados"}`;
-    if (!currentRestaurant) { window.location.href = "/"; return; }
+    if (backLink)
+      backLink.href = `/?tab=${currentRestaurant?.status === "pending" ? "pendientes" : "visitados"}`;
+    if (!currentRestaurant) {
+      window.location.href = "/";
+      return;
+    }
 
     // ─── Sort UI ──────────────────────────────────────────────────────────────
 
     function updateDishSortUI() {
-      document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach(btn => {
-        const isActive = btn.dataset.field === dishSort.field;
-        btn.classList.toggle("active", isActive);
-        btn.querySelector("i")!.className = isActive
-          ? `bi bi-arrow-${dishSort.dir === "asc" ? "up" : "down"}`
-          : "bi bi-arrow-down-up";
-      });
+      document
+        .querySelectorAll<HTMLButtonElement>(".sort-pill")
+        .forEach((btn) => {
+          const isActive = btn.dataset.field === dishSort.field;
+          btn.classList.toggle("active", isActive);
+          btn.querySelector("i")!.className = isActive
+            ? `bi bi-arrow-${dishSort.dir === "asc" ? "up" : "down"}`
+            : "bi bi-arrow-down-up";
+        });
     }
 
     // ─── Cablear controles ────────────────────────────────────────────────────
 
-    document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach(btn => {
-      btn.onclick = () => {
-        const field = btn.dataset.field as SortField;
-        if (dishSort.field === field) dishSort.dir = dishSort.dir === "asc" ? "desc" : "asc";
-        else { dishSort.field = field; dishSort.dir = field === "name" ? "asc" : "desc"; }
-        setSortState(dishSort);
-        updateDishSortUI();
-        rerenderRestaurantePage();
-      };
-    });
+    document
+      .querySelectorAll<HTMLButtonElement>(".sort-pill")
+      .forEach((btn) => {
+        btn.onclick = () => {
+          const field = btn.dataset.field as SortField;
+          if (dishSort.field === field)
+            dishSort.dir = dishSort.dir === "asc" ? "desc" : "asc";
+          else {
+            dishSort.field = field;
+            dishSort.dir = field === "name" ? "asc" : "desc";
+          }
+          setSortState(dishSort);
+          updateDishSortUI();
+          rerenderRestaurantePage();
+        };
+      });
 
-    document.getElementById("btn-add-dish")!.onclick =
-      () => (window as any).dishForm.open("create", currentRestaurant!.id);
+    document.getElementById("btn-add-dish")!.onclick = () =>
+      (window as any).dishForm.open("create", currentRestaurant!.id);
 
     // ─── Búsqueda de platos ───────────────────────────────────────────────────
 
-    const searchEl = document.getElementById("dish-search") as HTMLInputElement | null;
+    const searchEl = document.getElementById(
+      "dish-search",
+    ) as HTMLInputElement | null;
     if (searchEl) {
       searchEl.value = dishSearch;
-      searchEl.oninput = () => { dishSearch = searchEl.value; rerenderRestaurantePage(); };
+      searchEl.oninput = () => {
+        dishSearch = searchEl.value;
+        rerenderRestaurantePage();
+      };
     }
 
     // ─── Filtro por tipo ──────────────────────────────────────────────────────
 
-    const typeSelectEl = document.getElementById("dish-type-select") as HTMLSelectElement | null;
+    const typeSelectEl = document.getElementById(
+      "dish-type-select",
+    ) as HTMLSelectElement | null;
     if (typeSelectEl) {
       typeSelectEl.onchange = () => {
         dishTypeFilter = typeSelectEl.value;
@@ -567,9 +649,13 @@ const tplRestaurant: Restaurant = { id: "", name: "...", status: "visited", note
 
     const onPopState = () => navigate(window.location.href);
     window.addEventListener("popstate", onPopState);
-    document.addEventListener("astro:before-preparation", () => {
-      window.removeEventListener("popstate", onPopState);
-    }, { once: true });
+    document.addEventListener(
+      "astro:before-preparation",
+      () => {
+        window.removeEventListener("popstate", onPopState);
+      },
+      { once: true },
+    );
 
     // ─── Render inicial con event wiring ─────────────────────────────────────
 

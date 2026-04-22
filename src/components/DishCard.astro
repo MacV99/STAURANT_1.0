@@ -86,7 +86,7 @@ const { dish: d, typeName } = Astro.props;
     width: 40px;
     height: 40px;
     padding: 0;
-    border-radius: 50%;
+    border-radius: 14px;
     letter-spacing: 0;
     text-transform: none;
     background: var(--clr-white2);
@@ -102,7 +102,7 @@ const { dish: d, typeName } = Astro.props;
 
   @media (hover: hover) {
     .dish-card:hover {
-      border-color: #000000;
+      border-color: var(--clr-border2);
     }
 
     .dish-actions .btn-edit-dish:hover {

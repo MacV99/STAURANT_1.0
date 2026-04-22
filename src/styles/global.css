@@ -2,7 +2,7 @@
 
 :root {
   /* COLORES - Paleta minimalista blanco y negro */
-  --clr-primary: #1d1d1d;
+  --clr-primary: #2e2e2e;
   --clr-primary-dark: #1A1A1A;
   --clr-dark: #212121;
   --clr-dark2: #636363;
@@ -11,7 +11,8 @@
 
   /* --clr-gray: #646464; */
   --clr-text: #000000;
-  --clr-border: #d0d0d0;
+  --clr-border: #e4e4e4;
+  --clr-border2: #cecece;
 
   /* TIPOGRAFÍA */
   --font-main: "Montserrat", sans-serif;
@@ -69,6 +70,7 @@ body {
   align-items: center;
   flex-direction: column;
   background-color: var(--clr-white2);
+  /* background-image: url("/img/wallpaper.jpg"); */
 }
 
 /* === MAIN === */
@@ -194,7 +196,7 @@ select {
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: var(--clr-primary);
+  border-color: var(--clr-border2);
 }
 
 select {
