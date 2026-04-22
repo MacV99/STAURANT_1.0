@@ -95,16 +95,15 @@ const { dish: d, typeName } = Astro.props;
   }
 
   .btn-menu {
-    font-size: 0.9rem;
+    font-size: 1.2rem;
     width: 40px;
     height: 40px;
     padding: 0;
     border-radius: 14px;
     letter-spacing: 0;
-    text-transform: none;
-    background: var(--clr-white2);
+    background: none;
     color: var(--clr-primary);
-    border: solid 1px var(--clr-border);
+    border: none;
   }
 
   .menu-popup {
@@ -136,7 +135,6 @@ const { dish: d, typeName } = Astro.props;
     color: var(--clr-text);
     font-size: 0.9rem;
     cursor: pointer;
-    transition: background-color var(--transition);
     text-transform: none;
     letter-spacing: 0;
     width: 100%;
@@ -153,7 +151,7 @@ const { dish: d, typeName } = Astro.props;
 
   @media (hover: hover) {
     .btn-menu:hover {
-      background: var(--clr-border);
+      background: var(--clr-white2);
     }
 
     .menu-item:hover {

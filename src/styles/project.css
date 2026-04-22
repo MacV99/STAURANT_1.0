@@ -212,12 +212,11 @@
   color: var(--clr-text);
   font-size: 0.9rem;
   cursor: pointer;
-  transition: background-color var(--transition);
   text-transform: none;
   letter-spacing: 0;
   width: 100%;
   justify-content: flex-start;
-  font-family: var(--font-main);
+  border-radius: 0px;
 }
 
 .menu-item i {
