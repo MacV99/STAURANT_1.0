@@ -8,7 +8,7 @@
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(20, 30, 12, 0.18);
+  background: rgba(0, 0, 0, 0.15);
   backdrop-filter: blur(6px);
   z-index: 200;
   align-items: center;
@@ -56,19 +56,19 @@
 .badge-low {
   background: #fce8ec;
   color: #b02a3a;
-  box-shadow: 0 2px 8px rgba(176, 42, 58, 0.2);
+  border: solid 1px #f0b8c0ad;
 }
 
 .badge-mid {
   background: #fff3d6;
   color: #a06010;
-  box-shadow: 0 2px 8px rgba(160, 96, 16, 0.2);
+  border: solid 1px #f0c17bad;
 }
 
 .badge-high {
   background: #d8f5e2;
   color: #1a7a38;
-  box-shadow: 0 2px 8px rgba(26, 122, 56, 0.2);
+  border: solid 1px #a8e0b8ad;
 }
 
 /* === CARDS GRID === */
@@ -104,9 +104,9 @@
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.5px;
-  color: #546b41;
-  background: #e5eddb;
-  border: solid 1px #99ad7a;
+  color: #B24BA8;
+  background: #F5E8F5;
+  border: solid 1px #E0C0E0;
   border-radius: 20px;
   padding: 3px 10px;
 }
@@ -153,7 +153,7 @@
   border-color: var(--clr-primary);
   font-size: 1.5rem;
   letter-spacing: 0;
-  box-shadow: 0 6px 20px rgba(84, 107, 65, 0.45);
+  box-shadow: 0 4px 12px rgba(178, 75, 168, 0.25);
   z-index: 150;
 }
 
@@ -172,8 +172,8 @@
   .fab:hover {
     background: var(--clr-primary-dark);
     border-color: var(--clr-primary-dark);
-    box-shadow: 0 8px 28px rgba(84, 107, 65, 0.55);
-    transform: scale(1.07);
+    box-shadow: 0 6px 16px rgba(178, 75, 168, 0.35);
+    transform: scale(1.05);
   }
 
   .btn-danger:hover {

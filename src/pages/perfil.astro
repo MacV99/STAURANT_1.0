@@ -72,7 +72,6 @@ import Layout1 from "../layouts/Layout1.astro";
     display: flex;
     flex-direction: column;
     gap: 20px;
-    box-shadow: 0 4px 20px rgba(84, 107, 65, 0.08);
   }
 
   .profile-avatar {
@@ -214,14 +213,21 @@ import Layout1 from "../layouts/Layout1.astro";
     const emailEl = document.getElementById("profile-email");
     if (!emailEl) return;
     try {
-      const cached = JSON.parse(localStorage.getItem(PROFILE_CACHE_KEY) ?? "null");
+      const cached = JSON.parse(
+        localStorage.getItem(PROFILE_CACHE_KEY) ?? "null",
+      );
       if (!cached) return;
       emailEl.textContent = cached.email || "—";
-      const nameInput = document.getElementById("profile-name") as HTMLInputElement | null;
-      const avatarEl  = document.getElementById("profile-avatar");
+      const nameInput = document.getElementById(
+        "profile-name",
+      ) as HTMLInputElement | null;
+      const avatarEl = document.getElementById("profile-avatar");
       if (nameInput && cached.name) nameInput.value = cached.name;
-      if (avatarEl  && cached.name) avatarEl.textContent = cached.name.charAt(0).toUpperCase();
-    } catch { /* ignore */ }
+      if (avatarEl && cached.name)
+        avatarEl.textContent = cached.name.charAt(0).toUpperCase();
+    } catch {
+      /* ignore */
+    }
   });
 
   // Usar astro:page-load garantiza que este código corre en cada navegación
@@ -233,18 +239,28 @@ import Layout1 from "../layouts/Layout1.astro";
     if (!emailEl) return;
 
     // ─── Auth guard ─────────────────────────────────────────────────────────
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { window.location.href = "/login"; return; }
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      window.location.href = "/login";
+      return;
+    }
     await initCache(session.user.id);
 
     // ─── Back link contextual ───────────────────────────────────────────────
-    const fromTab = new URLSearchParams(window.location.search).get("from") ?? "visitados";
-    const backLinkEl = document.querySelector(".back-link") as HTMLAnchorElement;
+    const fromTab =
+      new URLSearchParams(window.location.search).get("from") ?? "visitados";
+    const backLinkEl = document.querySelector(
+      ".back-link",
+    ) as HTMLAnchorElement;
     if (backLinkEl) backLinkEl.href = `/?tab=${fromTab}`;
 
     // ─── Cargar datos de perfil ─────────────────────────────────────────────
     const user = session.user;
-    const nameInput = document.getElementById("profile-name") as HTMLInputElement;
+    const nameInput = document.getElementById(
+      "profile-name",
+    ) as HTMLInputElement;
     const msgEl = document.getElementById("profile-msg")!;
     const avatarEl = document.getElementById("profile-avatar")!;
 
@@ -262,10 +278,13 @@ import Layout1 from "../layouts/Layout1.astro";
     }
 
     // Guardar en caché local para pre-render instantáneo en la próxima visita
-    localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({
-      email: user.email ?? "",
-      name: profile?.name ?? "",
-    }));
+    localStorage.setItem(
+      PROFILE_CACHE_KEY,
+      JSON.stringify({
+        email: user.email ?? "",
+        name: profile?.name ?? "",
+      }),
+    );
 
     // ─── Guardar nombre ─────────────────────────────────────────────────────
     // Usamos .onsubmit (asignación de propiedad) en vez de addEventListener
@@ -277,7 +296,9 @@ import Layout1 from "../layouts/Layout1.astro";
       msgEl.classList.remove("error");
 
       const name = nameInput.value.trim();
-      const btn = form.querySelector<HTMLButtonElement>("button[type='submit']")!;
+      const btn = form.querySelector<HTMLButtonElement>(
+        "button[type='submit']",
+      )!;
       btn.disabled = true;
       btn.textContent = "Guardando...";
 
@@ -294,7 +315,10 @@ import Layout1 from "../layouts/Layout1.astro";
         if (name) {
           avatarEl.textContent = name.charAt(0).toUpperCase();
           // Actualizar caché local para que el pre-render refleje el nombre nuevo
-          localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({ email: user.email ?? "", name }));
+          localStorage.setItem(
+            PROFILE_CACHE_KEY,
+            JSON.stringify({ email: user.email ?? "", name }),
+          );
         }
       }
 
