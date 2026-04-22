@@ -15,6 +15,7 @@
 
   /* EFECTOS Y TIMING */
   --transition: 0.12s ease;
+  --border-radius: 12px;
 }
 
 /* === RESET BÁSICO === */
@@ -186,6 +187,7 @@ select {
   font-family: var(--font-main);
   color: var(--clr-text);
   transition: var(--transition);
+  border-radius: var(--border-radius);
 }
 
 input:focus,
