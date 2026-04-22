@@ -106,7 +106,7 @@
   letter-spacing: 0.5px;
   color: #000000;
   background: #F5F5F5;
-  border: solid 1px #D0D0D0;
+  border: solid 1px var(--clr-border);
   border-radius: 20px;
   padding: 3px 10px;
 }

@@ -19,12 +19,14 @@ const isPending = r.status === "pending";
 >
   <div class="card-body">
     <h3>{r.name}</h3>
-    {!isPending && (
-      <span class="dish-count-pill">
-        <i class="bi bi-journal-text" /> {dishCount}{" "}
-        {dishCount === 1 ? "plato" : "platos"}
-      </span>
-    )}
+    {
+      !isPending && (
+        <span class="dish-count-pill">
+          <i class="bi bi-journal-text" /> {dishCount}{" "}
+          {dishCount === 1 ? "plato" : "platos"}
+        </span>
+      )
+    }
   </div>
   <RatingBadge score={avg} />
 </article>
@@ -32,7 +34,7 @@ const isPending = r.status === "pending";
 <style>
   .restaurant-card {
     background: #ffffff;
-    border: 1px solid #D0D0D0;
+    border: 1px solid var(--clr-border);
     border-radius: 18px;
     padding: 16px;
     display: flex;
@@ -61,7 +63,7 @@ const isPending = r.status === "pending";
 
   @media (hover: hover) {
     .restaurant-card.card-clickable:hover {
-      border-color: #000000;
+      background-color: var(--clr-border);
     }
   }
 

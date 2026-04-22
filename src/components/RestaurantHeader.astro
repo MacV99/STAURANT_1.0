@@ -18,19 +18,33 @@ const isPending = r.status === "pending";
     <div class="rh-meta">
       <h1 class="rh-name">{r.name}</h1>
       <div class="rh-pills">
-        {isPending
-          ? <span class="pending-tag"><i class="bi bi-bookmark"></i> Pendiente</span>
-          : <span class="dish-count-pill">
-              <i class="bi bi-journal-text"></i> {dishCount} {dishCount === 1 ? "plato" : "platos"}
+        {
+          isPending ? (
+            <span class="pending-tag">
+              <i class="bi bi-bookmark" /> Pendiente
             </span>
+          ) : (
+            <span class="dish-count-pill">
+              <i class="bi bi-journal-text" /> {dishCount}{" "}
+              {dishCount === 1 ? "plato" : "platos"}
+            </span>
+          )
         }
       </div>
     </div>
     <div class="rh-actions">
-      <button class="btn-edit-rh boton2" data-id={r.id} aria-label="Editar restaurante">
+      <button
+        class="btn-edit-rh boton2"
+        data-id={r.id}
+        aria-label="Editar restaurante"
+      >
         <i class="bi bi-pencil"></i>
       </button>
-      <button class="btn-delete-rh boton2" data-id={r.id} aria-label="Eliminar restaurante">
+      <button
+        class="btn-delete-rh boton2"
+        data-id={r.id}
+        aria-label="Eliminar restaurante"
+      >
         <i class="bi bi-trash"></i>
       </button>
     </div>
@@ -41,7 +55,7 @@ const isPending = r.status === "pending";
 <style>
   .rh-card {
     background: #ffffff;
-    border: 1px solid #D0D0D0;
+    border: 1px solid var(--clr-border);
     border-radius: 20px;
     padding: 22px 20px;
     display: flex;

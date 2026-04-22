@@ -2,16 +2,16 @@
 
 :root {
   /* COLORES - Paleta minimalista blanco y negro */
-  --clr-primary: #000000;
+  --clr-primary: #1d1d1d;
   --clr-primary-dark: #1A1A1A;
-  --clr-dark: #000000;
-  --clr-dark2: #000000;
+  --clr-dark: #212121;
+  --clr-dark2: #636363;
   --clr-white: #FFFFFF;
-  --clr-white2: #F5F5F5;
+  --clr-white2: #f7f7f7;
 
   /* --clr-gray: #646464; */
   --clr-text: #000000;
-  --clr-border: #D0D0D0;
+  --clr-border: #d0d0d0;
 
   /* TIPOGRAFÍA */
   --font-main: "Montserrat", sans-serif;
@@ -68,7 +68,7 @@ body {
   display: flex;
   align-items: center;
   flex-direction: column;
-  background-color: var(--clr-white);
+  background-color: var(--clr-white2);
 }
 
 /* === MAIN === */
