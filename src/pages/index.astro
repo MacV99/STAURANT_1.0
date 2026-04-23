@@ -18,8 +18,10 @@ const tplRestaurant: Restaurant = {
 
 <Layout1 title="STAURANT">
   <div class="app-page">
+    <TabBar />
+
     <div class="search-wrap">
-      <i class="bi bi-search search-icon"></i>
+      <i class="bi bi-search-fill search-icon"></i>
       <input
         id="restaurant-search"
         class="search-input"
@@ -30,13 +32,13 @@ const tplRestaurant: Restaurant = {
       />
     </div>
 
-    <TabBar />
-
-    <SortBar pills={[
-      { field: "date",   label: "Fecha" },
-      { field: "name",   label: "Nombre" },
-      { field: "rating", label: "Rating" },
-    ]} />
+    <SortBar
+      pills={[
+        { field: "date", label: "Fecha" },
+        { field: "name", label: "Nombre" },
+        { field: "rating", label: "Rating" },
+      ]}
+    />
 
     <div id="tab-visitados" class="tab-content" role="tabpanel" hidden></div>
     <div id="tab-pendientes" class="tab-content" role="tabpanel" hidden></div>
@@ -103,7 +105,7 @@ const tplRestaurant: Restaurant = {
 
   .search-input:focus {
     outline: none;
-    border-color: var(--clr-primary);
+    border-color: var(--clr-border2);
   }
 
   /* ocultar el botón nativo de limpiar en Chrome/Safari */
@@ -122,7 +124,8 @@ const tplRestaurant: Restaurant = {
   import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
   import {
-    initCache, isCacheLoaded,
+    initCache,
+    isCacheLoaded,
     getRestaurants,
     getDishesByRestaurant,
     getRestaurantAverage,
@@ -133,7 +136,7 @@ const tplRestaurant: Restaurant = {
   // ─── Sort state (persiste entre navegaciones en memoria de módulo) ──────────
 
   type SortField = "name" | "rating" | "date";
-  type SortDir   = "asc" | "desc";
+  type SortDir = "asc" | "desc";
   const SORT_KEY = "staurant_sort_r";
 
   function getSortState(): { field: SortField; dir: SortDir } {
@@ -141,10 +144,11 @@ const tplRestaurant: Restaurant = {
       const saved = JSON.parse(localStorage.getItem(SORT_KEY) ?? "{}");
       return {
         field: (saved.field as SortField) ?? "date",
-        dir:   (saved.dir   as SortDir)   ?? "desc",
+        dir: (saved.dir as SortDir) ?? "desc",
       };
+    } catch {
+      return { field: "date", dir: "desc" };
     }
-    catch { return { field: "date", dir: "desc" }; }
   }
   function setSortState(s: { field: SortField; dir: SortDir }) {
     localStorage.setItem(SORT_KEY, JSON.stringify(s));
@@ -172,26 +176,40 @@ const tplRestaurant: Restaurant = {
   }
 
   function getActiveTab(): "visitados" | "pendientes" {
-    return (new URLSearchParams(window.location.search).get("tab") as "visitados" | "pendientes") ?? "visitados";
+    return (
+      (new URLSearchParams(window.location.search).get("tab") as
+        | "visitados"
+        | "pendientes") ?? "visitados"
+    );
   }
 
   // ─── Sort UI ──────────────────────────────────────────────────────────────
 
   function updateSortUI() {
-    document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach(btn => {
-      const isActive = btn.dataset.field === sortState.field;
-      btn.classList.toggle("active", isActive);
-      btn.querySelector("i")!.className = isActive
-        ? `bi bi-arrow-${sortState.dir === "asc" ? "up" : "down"}`
-        : "bi bi-arrow-down-up";
-    });
+    document
+      .querySelectorAll<HTMLButtonElement>(".sort-pill")
+      .forEach((btn) => {
+        const isActive = btn.dataset.field === sortState.field;
+        btn.classList.toggle("active", isActive);
+        btn.querySelector("i")!.className = isActive
+          ? `bi bi-arrow-${sortState.dir === "asc" ? "up" : "down"}`
+          : "bi bi-arrow-down-up";
+      });
   }
 
   // ─── Construye un elemento <article> clonando el template del componente ────
 
-  function buildRestaurantCardElement(r: Restaurant, avg: number | null, dishCount: number): Element {
-    const tpl = document.getElementById("tpl-restaurant-card") as HTMLTemplateElement;
-    const article = (tpl.content.cloneNode(true) as DocumentFragment).querySelector("article")!;
+  function buildRestaurantCardElement(
+    r: Restaurant,
+    avg: number | null,
+    dishCount: number,
+  ): Element {
+    const tpl = document.getElementById(
+      "tpl-restaurant-card",
+    ) as HTMLTemplateElement;
+    const article = (
+      tpl.content.cloneNode(true) as DocumentFragment
+    ).querySelector("article")!;
 
     article.setAttribute("data-href", `/restaurante?id=${r.id}`);
     article.setAttribute("style", `view-transition-name: restaurant-${r.id}`);
@@ -217,11 +235,13 @@ const tplRestaurant: Restaurant = {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   function renderList(status: "visited" | "pending", container: HTMLElement) {
-    const q   = searchQuery.toLowerCase().trim();
-    const all = getRestaurants().filter(r => {
+    const q = searchQuery.toLowerCase().trim();
+    const all = getRestaurants().filter((r) => {
       if (r.status !== status) return false;
       if (!q) return true;
-      return r.name.toLowerCase().includes(q) || r.notes.toLowerCase().includes(q);
+      return (
+        r.name.toLowerCase().includes(q) || r.notes.toLowerCase().includes(q)
+      );
     });
     const sorted = sortRestaurants(all);
 
@@ -242,8 +262,12 @@ const tplRestaurant: Restaurant = {
     container.innerHTML = "";
     const grid = document.createElement("div");
     grid.className = "cards-grid";
-    sorted.forEach(r => {
-      const card = buildRestaurantCardElement(r, getRestaurantAverage(r.id), getDishesByRestaurant(r.id).length);
+    sorted.forEach((r) => {
+      const card = buildRestaurantCardElement(
+        r,
+        getRestaurantAverage(r.id),
+        getDishesByRestaurant(r.id).length,
+      );
       card.addEventListener("click", () => navigate(`/restaurante?id=${r.id}`));
       grid.appendChild(card);
     });
@@ -254,23 +278,26 @@ const tplRestaurant: Restaurant = {
     const all = getRestaurants();
     const cv = document.getElementById("count-visitados");
     const cp = document.getElementById("count-pendientes");
-    if (cv) cv.textContent = String(all.filter((r) => r.status === "visited").length);
-    if (cp) cp.textContent = String(all.filter((r) => r.status === "pending").length);
+    if (cv)
+      cv.textContent = String(all.filter((r) => r.status === "visited").length);
+    if (cp)
+      cp.textContent = String(all.filter((r) => r.status === "pending").length);
   }
 
   function updateSortBarVisibility() {
     const sortBarEl = document.querySelector<HTMLElement>(".sort-bar");
     if (!sortBarEl) return;
     const status = getActiveTab() === "visitados" ? "visited" : "pending";
-    sortBarEl.hidden = getRestaurants().filter((r) => r.status === status).length < 2;
+    sortBarEl.hidden =
+      getRestaurants().filter((r) => r.status === status).length < 2;
   }
 
   function renderBoth() {
     const tv = document.getElementById("tab-visitados") as HTMLElement | null;
     const tp = document.getElementById("tab-pendientes") as HTMLElement | null;
     if (!tv || !tp) return;
-    renderList("visited",  tv);
-    renderList("pending",  tp);
+    renderList("visited", tv);
+    renderList("pending", tp);
     updateCounts();
     updateSortBarVisibility();
   }
@@ -292,38 +319,48 @@ const tplRestaurant: Restaurant = {
 
   // ─── Listeners permanentes a nivel de módulo ──────────────────────────────
 
-  document.addEventListener("restaurant:created", () => { renderBoth(); activateTab("pendientes"); });
+  document.addEventListener("restaurant:created", () => {
+    renderBoth();
+    activateTab("pendientes");
+  });
   document.addEventListener("restaurant:updated", () => renderBoth());
   document.addEventListener("restaurant:visited", () => renderBoth());
 
   // ─── PRE-RENDER en astro:after-swap ─────────────────────────────────────────
 
   document.addEventListener("astro:after-swap", () => {
-    const tabVisitadosEl  = document.getElementById("tab-visitados")  as HTMLElement | null;
-    const tabPendientesEl = document.getElementById("tab-pendientes") as HTMLElement | null;
+    const tabVisitadosEl = document.getElementById(
+      "tab-visitados",
+    ) as HTMLElement | null;
+    const tabPendientesEl = document.getElementById(
+      "tab-pendientes",
+    ) as HTMLElement | null;
     if (!tabVisitadosEl || !isCacheLoaded()) return;
 
     const activeTab = getActiveTab();
 
-    renderList("visited",  tabVisitadosEl);
+    renderList("visited", tabVisitadosEl);
     if (tabPendientesEl) renderList("pending", tabPendientesEl);
 
-    tabVisitadosEl.hidden  = activeTab !== "visitados";
+    tabVisitadosEl.hidden = activeTab !== "visitados";
     if (tabPendientesEl) tabPendientesEl.hidden = activeTab !== "pendientes";
 
     const sortBarEl = document.querySelector<HTMLElement>(".sort-bar");
     if (sortBarEl) {
       const status = activeTab === "visitados" ? "visited" : "pending";
-      sortBarEl.hidden = getRestaurants().filter(r => r.status === status).length < 2;
+      sortBarEl.hidden =
+        getRestaurants().filter((r) => r.status === status).length < 2;
     }
 
     const all = getRestaurants();
     const cv = document.getElementById("count-visitados");
     const cp = document.getElementById("count-pendientes");
-    if (cv) cv.textContent = String(all.filter(r => r.status === "visited").length);
-    if (cp) cp.textContent = String(all.filter(r => r.status === "pending").length);
+    if (cv)
+      cv.textContent = String(all.filter((r) => r.status === "visited").length);
+    if (cp)
+      cp.textContent = String(all.filter((r) => r.status === "pending").length);
 
-    document.querySelectorAll<HTMLButtonElement>(".tab-btn").forEach(btn => {
+    document.querySelectorAll<HTMLButtonElement>(".tab-btn").forEach((btn) => {
       const active = btn.dataset.tab === activeTab;
       btn.classList.toggle("active", active);
       btn.setAttribute("aria-selected", String(active));
@@ -338,36 +375,49 @@ const tplRestaurant: Restaurant = {
     const tabVisitadosEl = document.getElementById("tab-visitados");
     if (!tabVisitadosEl) return;
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { window.location.href = "/login"; return; }
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      window.location.href = "/login";
+      return;
+    }
     await initCache(session.user.id);
 
-    document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
-      btn.onclick = () => {
-        const field = btn.dataset.field as SortField;
-        if (sortState.field === field) {
-          sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
-        } else {
-          sortState.field = field;
-          sortState.dir = field === "name" ? "asc" : "desc";
-        }
-        setSortState(sortState);
-        updateSortUI();
-        renderBoth();
-      };
-    });
+    document
+      .querySelectorAll<HTMLButtonElement>(".sort-pill")
+      .forEach((btn) => {
+        btn.onclick = () => {
+          const field = btn.dataset.field as SortField;
+          if (sortState.field === field) {
+            sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
+          } else {
+            sortState.field = field;
+            sortState.dir = field === "name" ? "asc" : "desc";
+          }
+          setSortState(sortState);
+          updateSortUI();
+          renderBoth();
+        };
+      });
 
     document.querySelectorAll<HTMLButtonElement>(".tab-btn").forEach((btn) => {
-      btn.onclick = () => activateTab(btn.dataset.tab as "visitados" | "pendientes");
+      btn.onclick = () =>
+        activateTab(btn.dataset.tab as "visitados" | "pendientes");
     });
 
     const fabEl = document.getElementById("btn-add-restaurant")!;
     fabEl.onclick = () => (window as any).restaurantForm.open("create");
 
-    const searchEl = document.getElementById("restaurant-search") as HTMLInputElement | null;
+    const searchEl = document.getElementById(
+      "restaurant-search",
+    ) as HTMLInputElement | null;
     if (searchEl) {
       searchEl.value = searchQuery;
-      searchEl.oninput = () => { searchQuery = searchEl.value; renderBoth(); };
+      searchEl.oninput = () => {
+        searchQuery = searchEl.value;
+        renderBoth();
+      };
     }
 
     updateSortUI();

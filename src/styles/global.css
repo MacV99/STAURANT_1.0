@@ -1,17 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 
 :root {
-  /* COLORES - Ajusta según tu proyecto */
-  --clr-primary: #30382a;
-  --clr-primary-dark: #3d5030;
-  --clr-dark: #353535;
-  --clr-dark2: #333333;
-  --clr-white: #fffdfb;
-  --clr-white2: #f8f3e8;
+  /* COLORES - Paleta minimalista blanco y negro */
+  --clr-primary: #2e2e2e;
+  --clr-primary-dark: #1A1A1A;
 
-  /* --clr-gray: #646464; */
-  --clr-text: #363630;
-  --clr-border: #dcccacaf;
+  --clr-white: #ffffff;
+  --clr-white2: #f7f7f7;
+
+  --clr-text: #2e2e2e;
+  --clr-border: #e4e4e4;
+  --clr-border2: #cecece;
 
   /* TIPOGRAFÍA */
   --font-main: "Montserrat", sans-serif;
@@ -40,7 +39,7 @@ html {
 /* === SCROLLBAR === */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(84, 107, 65, 0.28) transparent;
+  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
 }
 
 ::-webkit-scrollbar {
@@ -53,12 +52,12 @@ html {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(84, 107, 65, 0.28);
+  background: rgba(0, 0, 0, 0.3);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(84, 107, 65, 0.5);
+  background: rgba(0, 0, 0, 0.5);
 }
 
 /* === BODY === */
@@ -68,7 +67,8 @@ body {
   display: flex;
   align-items: center;
   flex-direction: column;
-  background-color: var(--clr-white);
+  background-color: var(--clr-white2);
+  /* background-image: url("/img/wallpaper.jpg"); */
 }
 
 /* === MAIN === */
@@ -189,12 +189,13 @@ select {
   font-family: var(--font-main);
   color: var(--clr-text);
   transition: var(--transition);
+  border-radius: var(--border-radius);
 }
 
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: var(--clr-primary);
+  border-color: var(--clr-border2);
 }
 
 select {

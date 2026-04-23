@@ -23,13 +23,30 @@ import Layout1 from "../layouts/Layout1.astro";
       <form id="form-login" novalidate>
         <label>
           <span class="field-label">Email</span>
-          <input type="email" id="login-email" autocomplete="email" placeholder="tu@email.com" required />
+          <input
+            type="email"
+            id="login-email"
+            autocomplete="email"
+            placeholder="tu@email.com"
+            required
+          />
         </label>
         <label>
           <span class="field-label">Contraseña</span>
           <div class="pw-wrapper">
-            <input type="password" id="login-password" autocomplete="current-password" placeholder="••••••••" required />
-            <button type="button" class="pw-toggle" id="toggle-login-pw" aria-label="Mostrar contraseña">
+            <input
+              type="password"
+              id="login-password"
+              autocomplete="current-password"
+              placeholder="••••••••"
+              required
+            />
+            <button
+              type="button"
+              class="pw-toggle"
+              id="toggle-login-pw"
+              aria-label="Mostrar contraseña"
+            >
               <i class="bi bi-eye"></i>
             </button>
           </div>
@@ -41,24 +58,50 @@ import Layout1 from "../layouts/Layout1.astro";
       <form id="form-register" novalidate>
         <label>
           <span class="field-label">Nombre</span>
-          <input type="text" id="reg-name" autocomplete="name" placeholder="Tu nombre" />
+          <input
+            type="text"
+            id="reg-name"
+            autocomplete="name"
+            placeholder="Tu nombre"
+          />
         </label>
         <label>
           <span class="field-label">Email</span>
-          <input type="email" id="reg-email" autocomplete="email" placeholder="tu@email.com" required />
+          <input
+            type="email"
+            id="reg-email"
+            autocomplete="email"
+            placeholder="tu@email.com"
+            required
+          />
         </label>
         <label>
-          <span class="field-label">Contraseña <span class="field-hint">(mín. 6 caracteres)</span></span>
+          <span class="field-label"
+            >Contraseña <span class="field-hint">(mín. 6 caracteres)</span
+            ></span
+          >
           <div class="pw-wrapper">
-            <input type="password" id="reg-password" autocomplete="new-password" placeholder="••••••••" required />
-            <button type="button" class="pw-toggle" id="toggle-reg-pw" aria-label="Mostrar contraseña">
+            <input
+              type="password"
+              id="reg-password"
+              autocomplete="new-password"
+              placeholder="••••••••"
+              required
+            />
+            <button
+              type="button"
+              class="pw-toggle"
+              id="toggle-reg-pw"
+              aria-label="Mostrar contraseña"
+            >
               <i class="bi bi-eye"></i>
             </button>
           </div>
         </label>
-        <button type="submit" class="btn-primary" id="btn-register">Crear cuenta</button>
+        <button type="submit" class="btn-primary" id="btn-register"
+          >Crear cuenta</button
+        >
       </form>
-
     </div>
   </div>
 </Layout1>
@@ -74,7 +117,7 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   .auth-card {
-    background: #ffffff;
+    background: var(--clr-white);
     border: solid 1px var(--clr-border);
     border-radius: 20px;
     padding: 32px 24px;
@@ -83,7 +126,7 @@ import Layout1 from "../layouts/Layout1.astro";
     display: flex;
     flex-direction: column;
     gap: 20px;
-    box-shadow: 0 4px 24px rgba(84, 107, 65, 0.1);
+    border: 1px solid var(--clr-border);
   }
 
   .auth-logo {
@@ -121,9 +164,8 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   .auth-tab.active {
-    background: #ffffff;
+    background: var(--clr-white);
     color: var(--clr-primary);
-    box-shadow: 0 1px 4px rgba(84, 107, 65, 0.15);
   }
 
   /* Oculto por defecto antes de que corra el JS */
@@ -229,7 +271,7 @@ import Layout1 from "../layouts/Layout1.astro";
   .btn-primary {
     width: 100%;
     background: var(--clr-primary);
-    color: white;
+    color: var(--clr-white);
     border-color: var(--clr-primary);
     font-size: 0.9rem;
     padding: 12px;
@@ -261,14 +303,20 @@ import Layout1 from "../layouts/Layout1.astro";
   import { supabase } from "../lib/supabase.ts";
 
   // Si ya hay sesión, ir directo al inicio
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) { window.location.href = "/"; }
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (session) {
+    window.location.href = "/";
+  }
 
   // ─── Tabs ──────────────────────────────────────────────────────────────────
 
   const tabBtns = document.querySelectorAll<HTMLButtonElement>(".auth-tab");
   const formLogin = document.getElementById("form-login") as HTMLFormElement;
-  const formRegister = document.getElementById("form-register") as HTMLFormElement;
+  const formRegister = document.getElementById(
+    "form-register",
+  ) as HTMLFormElement;
   const errorEl = document.getElementById("auth-error")!;
 
   function showTab(tab: "login" | "register") {
@@ -283,14 +331,18 @@ import Layout1 from "../layouts/Layout1.astro";
     void active.offsetHeight;
     active.classList.add("form-visible");
 
-    tabBtns.forEach((btn) => btn.classList.toggle("active", btn.dataset.tab === tab));
+    tabBtns.forEach((btn) =>
+      btn.classList.toggle("active", btn.dataset.tab === tab),
+    );
     errorEl.textContent = "";
   }
 
   showTab("login");
 
   tabBtns.forEach((btn) => {
-    btn.addEventListener("click", () => showTab(btn.dataset.tab as "login" | "register"));
+    btn.addEventListener("click", () =>
+      showTab(btn.dataset.tab as "login" | "register"),
+    );
   });
 
   // ─── Password toggles ──────────────────────────────────────────────────────
@@ -301,7 +353,9 @@ import Layout1 from "../layouts/Layout1.astro";
     btn.addEventListener("click", () => {
       const isHidden = input.type === "password";
       input.type = isHidden ? "text" : "password";
-      btn.querySelector("i")!.className = isHidden ? "bi bi-eye-slash" : "bi bi-eye";
+      btn.querySelector("i")!.className = isHidden
+        ? "bi bi-eye-slash"
+        : "bi bi-eye";
     });
   }
 
@@ -313,20 +367,29 @@ import Layout1 from "../layouts/Layout1.astro";
   formLogin.addEventListener("submit", async (e) => {
     e.preventDefault();
     errorEl.textContent = "";
-    const email = (document.getElementById("login-email") as HTMLInputElement).value.trim();
-    const password = (document.getElementById("login-password") as HTMLInputElement).value;
+    const email = (
+      document.getElementById("login-email") as HTMLInputElement
+    ).value.trim();
+    const password = (
+      document.getElementById("login-password") as HTMLInputElement
+    ).value;
     const btn = document.getElementById("btn-login") as HTMLButtonElement;
     btn.disabled = true;
     btn.textContent = "Entrando...";
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
     if (error) {
       const msg = error.message.toLowerCase();
-      errorEl.textContent =
-        msg.includes("invalid login credentials") ? "Email o contraseña incorrectos." :
-        msg.includes("email not confirmed") ? "Debes confirmar tu email antes de entrar. Revisa tu bandeja de entrada." :
-        msg.includes("too many requests") ? "Demasiados intentos. Espera unos minutos." :
-        "Error al iniciar sesión. Intenta de nuevo.";
+      errorEl.textContent = msg.includes("invalid login credentials")
+        ? "Email o contraseña incorrectos."
+        : msg.includes("email not confirmed")
+          ? "Debes confirmar tu email antes de entrar. Revisa tu bandeja de entrada."
+          : msg.includes("too many requests")
+            ? "Demasiados intentos. Espera unos minutos."
+            : "Error al iniciar sesión. Intenta de nuevo.";
       btn.disabled = false;
       btn.textContent = "Entrar";
       return;
@@ -339,9 +402,15 @@ import Layout1 from "../layouts/Layout1.astro";
   formRegister.addEventListener("submit", async (e) => {
     e.preventDefault();
     errorEl.textContent = "";
-    const name = (document.getElementById("reg-name") as HTMLInputElement).value.trim();
-    const email = (document.getElementById("reg-email") as HTMLInputElement).value.trim();
-    const password = (document.getElementById("reg-password") as HTMLInputElement).value;
+    const name = (
+      document.getElementById("reg-name") as HTMLInputElement
+    ).value.trim();
+    const email = (
+      document.getElementById("reg-email") as HTMLInputElement
+    ).value.trim();
+    const password = (
+      document.getElementById("reg-password") as HTMLInputElement
+    ).value;
     const btn = document.getElementById("btn-register") as HTMLButtonElement;
     btn.disabled = true;
     btn.textContent = "Creando cuenta...";
@@ -354,10 +423,13 @@ import Layout1 from "../layouts/Layout1.astro";
     if (error) {
       const msg = error.message.toLowerCase();
       errorEl.textContent =
-        msg.includes("already registered") || msg.includes("user already") ? "Ya existe una cuenta con ese email." :
-        msg.includes("password") ? "La contraseña debe tener al menos 6 caracteres." :
-        msg.includes("invalid email") ? "El formato del email no es válido." :
-        "Error al crear la cuenta. Intenta de nuevo.";
+        msg.includes("already registered") || msg.includes("user already")
+          ? "Ya existe una cuenta con ese email."
+          : msg.includes("password")
+            ? "La contraseña debe tener al menos 6 caracteres."
+            : msg.includes("invalid email")
+              ? "El formato del email no es válido."
+              : "Error al crear la cuenta. Intenta de nuevo.";
       btn.disabled = false;
       btn.textContent = "Crear cuenta";
       return;

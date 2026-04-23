@@ -18,21 +18,34 @@ const isPending = r.status === "pending";
     <div class="rh-meta">
       <h1 class="rh-name">{r.name}</h1>
       <div class="rh-pills">
-        {isPending
-          ? <span class="pending-tag"><i class="bi bi-bookmark"></i> Pendiente</span>
-          : <span class="dish-count-pill">
-              <i class="bi bi-journal-text"></i> {dishCount} {dishCount === 1 ? "plato" : "platos"}
+        {
+          isPending ? (
+            <span class="pending-tag">
+              <i class="bi bi-bookmark-fill" /> Pendiente
             </span>
+          ) : (
+            <span class="dish-count-pill">
+              <i class="bi bi-journal-text" /> {dishCount}{" "}
+              {dishCount === 1 ? "plato" : "platos"}
+            </span>
+          )
         }
       </div>
     </div>
-    <div class="rh-actions">
-      <button class="btn-edit-rh boton2" data-id={r.id} aria-label="Editar restaurante">
-        <i class="bi bi-pencil"></i>
+    <div class="rh-menu">
+      <button class="rh-btn-menu boton2" data-id={r.id}>
+        <i class="bi bi-three-dots-vertical"></i>
       </button>
-      <button class="btn-delete-rh boton2" data-id={r.id} aria-label="Eliminar restaurante">
-        <i class="bi bi-trash"></i>
-      </button>
+      <div class="rh-menu-popup">
+        <button class="rh-menu-item rh-btn-edit-rh" data-id={r.id}>
+          <i class="bi bi-pencil-fill"></i>
+          <span>Editar</span>
+        </button>
+        <button class="rh-menu-item rh-btn-delete-rh" data-id={r.id}>
+          <i class="bi bi-trash-fill"></i>
+          <span>Eliminar</span>
+        </button>
+      </div>
     </div>
   </div>
   {r.notes && <p class="rh-notes">{r.notes}</p>}
@@ -40,14 +53,13 @@ const isPending = r.status === "pending";
 
 <style>
   .rh-card {
-    background: #ffffff;
-    border: none;
+    background: var(--clr-white);
+    border: 1px solid var(--clr-border);
     border-radius: 20px;
     padding: 22px 20px;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    box-shadow: 0 4px 20px rgba(84, 107, 65, 0.1), 0 1px 4px rgba(0, 0, 0, 0.06);
   }
 
   .rh-top {
@@ -64,30 +76,66 @@ const isPending = r.status === "pending";
     min-width: 0;
   }
 
-  .rh-actions {
-    display: flex;
-    gap: 6px;
+  .rh-menu {
+    position: relative;
     flex-shrink: 0;
     align-self: flex-start;
   }
 
-  .rh-actions button {
-    font-size: 0.9rem;
+  .rh-btn-menu {
+    font-size: 1.2rem;
     width: 40px;
     height: 40px;
     padding: 0;
-    border-radius: 50%;
+    border-radius: 14px;
     letter-spacing: 0;
-    text-transform: none;
-    background: var(--clr-white2);
+    background: none;
     color: var(--clr-primary);
-    border-color: var(--clr-border);
+    border: none;
   }
 
-  .rh-actions .btn-delete-rh {
+  .rh-menu-popup {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background: var(--clr-white);
+    border: 1px solid var(--clr-border);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    min-width: 140px;
+    overflow: hidden;
+  }
+
+  .rh-menu-popup.active {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .rh-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: transparent;
+    border: none;
+    color: var(--clr-text);
+    font-size: 0.9rem;
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: 0;
+    width: 100%;
+    justify-content: flex-start;
+    border-radius: 0px;
+  }
+
+  .rh-menu-item i {
+    font-size: 0.9rem;
+  }
+
+  .rh-menu-item.rh-btn-delete-rh {
     color: #b02a3a;
-    background: #fce8ec;
-    border-color: #f0b8c0;
   }
 
   .rh-pills {
@@ -97,8 +145,8 @@ const isPending = r.status === "pending";
   }
 
   .rh-name {
-    font-size: 1.4rem;
-    font-weight: 800;
+    font-size: 1.2rem;
+    font-weight: 750;
     letter-spacing: 0.5px;
     color: var(--clr-dark);
   }
@@ -111,12 +159,16 @@ const isPending = r.status === "pending";
   }
 
   @media (hover: hover) {
-    .rh-actions .btn-edit-rh:hover {
-      background: var(--clr-border);
+    .rh-btn-menu:hover {
+      background: var(--clr-white2);
     }
 
-    .rh-actions .btn-delete-rh:hover {
-      background: #f0b8c0;
+    .rh-menu-item:hover {
+      background: var(--clr-white2);
+    }
+
+    .rh-menu-item.rh-btn-delete-rh:hover {
+      background: #fce8ec;
     }
   }
 
@@ -126,7 +178,7 @@ const isPending = r.status === "pending";
     }
 
     .rh-name {
-      font-size: 1.7rem;
+      font-size: 1.5rem;
     }
   }
 </style>

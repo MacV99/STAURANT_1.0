@@ -10,7 +10,7 @@ export function getRatingClass(score: number): string {
 }
 
 export function getRatingBadgeHTML(score: number | null): string {
-  if (score === null) return `<span class="rating-badge badge-empty"><i class="bi bi-star"></i></span>`;
+  if (score === null) return `<span class="rating-badge badge-empty"><i class="bi bi-star-fill"></i></span>`;
   const cls = getRatingClass(score);
   return `<span class="rating-badge ${cls}"><span class="rating-num">${score}</span></span>`;
 }
@@ -26,7 +26,7 @@ export function renderRestaurantCard(
   const badge = getRatingBadgeHTML(avg);
   const dishPill = r.status === "visited"
     ? `<span class="dish-count-pill"><i class="bi bi-journal-text"></i> ${dishCount} ${dishCount === 1 ? "plato" : "platos"}</span>`
-    : `<span class="pending-tag"><i class="bi bi-bookmark"></i> Pendiente</span>`;
+    : `<span class="pending-tag"><i class="bi bi-bookmark-fill"></i> Pendiente</span>`;
 
   return `
     <article class="restaurant-card card-clickable" data-href="/restaurante?id=${r.id}" style="view-transition-name: restaurant-${r.id}">
@@ -53,12 +53,21 @@ export function renderDishCard(d: Dish, typeName?: string | null): string {
       </div>
       <div class="dish-actions">
         ${badge}
-        <button class="btn-edit-dish boton2" data-id="${d.id}">
-          <i class="bi bi-pencil"></i>
-        </button>
-        <button class="btn-delete-dish boton2" data-id="${d.id}">
-          <i class="bi bi-trash"></i>
-        </button>
+        <div class="dish-menu">
+          <button class="btn-menu boton2" data-id="${d.id}">
+            <i class="bi bi-three-dots-vertical"></i>
+          </button>
+          <div class="menu-popup">
+            <button class="menu-item btn-edit-dish" data-id="${d.id}">
+              <i class="bi bi-pencil-fill"></i>
+              <span>Editar</span>
+            </button>
+            <button class="menu-item btn-delete-dish" data-id="${d.id}">
+              <i class="bi bi-trash-fill"></i>
+              <span>Eliminar</span>
+            </button>
+          </div>
+        </div>
       </div>
     </article>
   `;
