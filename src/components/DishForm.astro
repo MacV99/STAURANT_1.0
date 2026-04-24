@@ -120,7 +120,7 @@
   .form-header h2 {
     font-size: 1.1rem;
     letter-spacing: 1px;
-    color: var(--clr-dark);
+    color: var(--clr-text);
   }
 
   .btn-close {
@@ -251,7 +251,7 @@
     font-weight: 400;
     letter-spacing: 0;
     text-transform: uppercase;
-    color: var(--clr-dark);
+    color: var(--clr-text);
     min-width: 0;
   }
 
@@ -343,15 +343,13 @@
   }
 </style>
 
-<style is:inline>
-  /* Opciones del dropdown — creadas con document.createElement() en JS,
-     no reciben data-astro-cid-* → necesitan is:inline para no ser scoped */
+<style is:global>
 
   #df-type-dropdown .type-option {
     padding: 12px 16px;
     font-size: 0.88rem;
     font-weight: 500;
-    color: var(--clr-dark);
+    color: var(--clr-text);
     cursor: pointer;
     letter-spacing: 0.3px;
     text-transform: uppercase;

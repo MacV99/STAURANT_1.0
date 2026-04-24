@@ -54,9 +54,9 @@
 }
 
 .badge-low {
-  background: #fce8ec;
-  color: #b02a3a;
-  border: solid 1px #f0b8c0ad;
+  background: var(--clr-danger-bg);
+  color: var(--clr-danger);
+  border: solid 1px color-mix(in srgb, var(--clr-danger-border) 68%, transparent);
 }
 
 .badge-mid {
@@ -104,8 +104,8 @@
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.5px;
-  color: #000000;
-  background: #F5F5F5;
+  color: var(--clr-text);
+  background: var(--clr-white2);
   border: solid 1px var(--clr-border);
   border-radius: 20px;
   padding: 3px 10px;
@@ -159,9 +159,9 @@
 /* === BUTTON DANGER === */
 
 .btn-danger {
-  background: #fce8ec;
-  color: #b02a3a;
-  border-color: #f0b8c0;
+  background: var(--clr-danger-bg);
+  color: var(--clr-danger);
+  border-color: var(--clr-danger-border);
 }
 
 /* === DISH MENU POPUP === */
@@ -224,7 +224,7 @@
 }
 
 .menu-item.btn-delete-dish {
-  color: #b02a3a;
+  color: var(--clr-danger);
 }
 
 /* === HOVER STATES === */
@@ -238,7 +238,7 @@
   }
 
   .btn-danger:hover {
-    background: #f0b8c0;
+    background: var(--clr-danger-border);
   }
 
   .btn-menu:hover {
@@ -250,7 +250,7 @@
   }
 
   .menu-item.btn-delete-dish:hover {
-    background: #fce8ec;
+    background: var(--clr-danger-bg);
   }
 }
 

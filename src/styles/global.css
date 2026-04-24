@@ -18,6 +18,11 @@
   /* EFECTOS Y TIMING */
   --transition: 0.12s ease;
   --border-radius: 12px;
+
+  /* ESTADOS SEMÁNTICOS */
+  --clr-danger: #b02a3a;
+  --clr-danger-bg: #fce8ec;
+  --clr-danger-border: #f0b8c0;
 }
 
 /* === RESET BÁSICO === */
@@ -56,8 +61,10 @@ html {
   border-radius: 10px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.5);
+@media (hover: hover) {
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.5);
+  }
 }
 
 /* === BODY === */

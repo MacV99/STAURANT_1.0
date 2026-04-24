@@ -89,6 +89,54 @@ const tplRestaurant: Restaurant = {
   </template>
 </Layout1>
 
+<style is:global>
+  #dish-type-dropdown .type-option {
+    padding: 8px 12px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--clr-text);
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.1s ease;
+    border-bottom: 1px solid var(--clr-border);
+  }
+
+  #dish-type-dropdown .type-option:last-child {
+    border-bottom: none;
+  }
+
+  #dish-type-dropdown .type-option.is-selected {
+    color: var(--clr-primary);
+    font-weight: 700;
+  }
+
+  #dish-type-dropdown .type-option.is-none {
+    color: var(--clr-text);
+    opacity: 0.55;
+    text-transform: none;
+    letter-spacing: 0;
+    border-bottom: 1px solid var(--clr-border);
+  }
+
+  #dish-type-dropdown .type-option.is-empty {
+    color: var(--clr-text);
+    opacity: 0.5;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    cursor: default;
+    text-align: center;
+    padding: 14px;
+  }
+
+  @media (hover: hover) {
+    #dish-type-dropdown .type-option:hover,
+    #dish-type-dropdown .type-option:focus {
+      background: var(--clr-white2);
+    }
+  }
+</style>
+
 <style>
   .detail-page {
     width: 100%;
@@ -142,7 +190,7 @@ const tplRestaurant: Restaurant = {
   .dishes-title {
     font-size: 1rem;
     letter-spacing: 2px;
-    color: var(--clr-dark);
+    color: var(--clr-text);
   }
 
   .dish-search-wrap {
@@ -168,7 +216,7 @@ const tplRestaurant: Restaurant = {
     border: 1.5px solid var(--clr-border);
     background: var(--clr-white);
     font-size: 0.88rem;
-    color: var(--clr-dark);
+    color: var(--clr-text);
     transition: border-color var(--transition);
   }
 
@@ -210,10 +258,6 @@ const tplRestaurant: Restaurant = {
     transition: var(--transition);
   }
 
-  .type-pill:hover {
-    border-color: var(--clr-border2);
-  }
-
   .type-pill.active {
     background: var(--clr-primary);
     border-color: var(--clr-primary);
@@ -250,50 +294,6 @@ const tplRestaurant: Restaurant = {
     overscroll-behavior: contain;
   }
 
-  #dish-type-dropdown :global(.type-option) {
-    padding: 8px 12px;
-    font-size: 0.72rem;
-    font-weight: 500;
-    color: var(--clr-dark);
-    cursor: pointer;
-    text-transform: uppercase;
-    transition: background 0.1s ease;
-    border-bottom: 1px solid var(--clr-border);
-  }
-
-  #dish-type-dropdown :global(.type-option:last-child) {
-    border-bottom: none;
-  }
-
-  #dish-type-dropdown :global(.type-option:hover),
-  #dish-type-dropdown :global(.type-option:focus) {
-    background: var(--clr-white2);
-  }
-
-  #dish-type-dropdown :global(.type-option.is-selected) {
-    color: var(--clr-primary);
-    font-weight: 700;
-  }
-
-  #dish-type-dropdown :global(.type-option.is-none) {
-    color: var(--clr-text);
-    opacity: 0.55;
-    text-transform: none;
-    letter-spacing: 0;
-    border-bottom: 1px solid var(--clr-border);
-  }
-
-  #dish-type-dropdown :global(.type-option.is-empty) {
-    color: var(--clr-text);
-    opacity: 0.5;
-    text-transform: none;
-    letter-spacing: 0;
-    font-weight: 400;
-    cursor: default;
-    text-align: center;
-    padding: 14px;
-  }
-
   #dishes-list {
     display: flex;
     flex-direction: column;
@@ -302,8 +302,13 @@ const tplRestaurant: Restaurant = {
 
   @media (hover: hover) {
     .back-link:hover {
-      color: var(--clr-dark);
+      color: var(--clr-text);
     }
+
+    .type-pill:hover {
+      border-color: var(--clr-border2);
+    }
+
   }
 
   @media (min-width: 768px) {
